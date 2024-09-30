@@ -45,12 +45,12 @@ from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab_tasks.utils import parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
     RslRlOnPolicyRunnerCfg,
-    RslRlVecEnvWrapper,
-    export_policy_as_onnx,
+    RslRlVecEnvWrapper
 )
 # from rsl_rl.runners import OnPolicyRunner
 # from rsl_rl.runners import TactileOnPolicyRunner, VisionOnPolicyRunner
 from isaaclab.rma.frameworks.robot_rl.runners import OnPolicyRunner
+from isaaclab.rma.frameworks.robot_rl.utils import export_policy_as_onnx
 
 Runner = OnPolicyRunner
 
@@ -163,7 +163,7 @@ def convert_policy():
         # with open(cfg_save_path, "w") as fp:
         #     json.dump(env_cfg, fp, indent=4)
         print(f"[INFO]: Saving policy onnx file to {export_model_dir}")
-        export_estimator_policy_as_onnx(ppo_runner.alg.actor_critic, ppo_runner.estimator_obs_normalizer, export_model_dir, filename=f"{model_file_name}.onnx")
+        export_policy_as_onnx(ppo_runner.alg.actor_critic, export_model_dir, filename=f"{model_file_name}.onnx")
     if len(policy_list) > 0:
         print(f"\n\033[92m[INFO] Exported {len(policy_list)} policy(ies) to {export_dir}\033[0m")
 
