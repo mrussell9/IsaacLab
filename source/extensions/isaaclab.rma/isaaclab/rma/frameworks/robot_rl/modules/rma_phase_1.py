@@ -97,32 +97,18 @@ class RMA1(nn.Module):
     def forward(self):
         raise NotImplementedError
 
-    @property
-    def action_mean(self):
-        return self.distribution.mean
-
-    @property
-    def action_std(self):
-        return self.distribution.stddev
-
-    @property
-    def entropy(self):
-        return self.distribution.entropy().sum(dim=-1)
-
-    def update_distribution(self, observations):
-        mean = self.actor(observations)
-        self.distribution = Normal(mean, mean * 0.0 + self.std)
+    # RMA's "actor" which includes the encoder and policy
+    def _act(self, obs):
+        z = self.encoder(obs)
+        policy_input = torch.cat([z, obs], dim=-1)
+        return self.policy(policy_input)
+        raise NotImplementedError
 
     def act(self, observations, **kwargs):
-        self.update_distribution(observations)
-        return self.distribution.sample()
-
-    def get_actions_log_prob(self, actions):
-        return self.distribution.log_prob(actions).sum(dim=-1)
+        return self._act(observations)
 
     def act_inference(self, observations):
-        actions_mean = self.actor(observations)
-        return actions_mean
+        return self._act(observations)
 
     def evaluate(self, critic_observations, **kwargs):
         value = self.critic(critic_observations)
