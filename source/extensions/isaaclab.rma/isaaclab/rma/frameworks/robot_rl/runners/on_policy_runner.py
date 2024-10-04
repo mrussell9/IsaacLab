@@ -13,7 +13,12 @@ from torch.utils.tensorboard import SummaryWriter as TensorboardSummaryWriter
 import isaaclab.rma.frameworks.robot_rl as robot_rl
 from isaaclab.rma.frameworks.robot_rl.algorithms import PPO
 from isaaclab.rma.frameworks.robot_rl.env import VecEnv
-from isaaclab.rma.frameworks.robot_rl.modules import ActorCritic, ActorCriticRecurrent, EmpiricalNormalization
+from isaaclab.rma.frameworks.robot_rl.modules import (
+    ActorCritic,
+    ActorCriticRecurrent,
+    EmpiricalNormalization,
+    RMA1,
+)
 from isaaclab.rma.frameworks.robot_rl.utils import store_code_state
 
 
@@ -33,7 +38,7 @@ class OnPolicyRunner:
         else:
             num_critic_obs = num_obs
         actor_critic_class = eval(self.policy_cfg.pop("class_name"))  # ActorCritic
-        actor_critic: ActorCritic | ActorCriticRecurrent = actor_critic_class(
+        actor_critic: ActorCritic | ActorCriticRecurrent | RMA1 = actor_critic_class(
             num_obs, num_critic_obs, self.env.num_actions, **self.policy_cfg
         ).to(self.device)
         alg_class = eval(self.alg_cfg.pop("class_name"))  # PPO
