@@ -19,7 +19,7 @@ class RMA1(nn.Module):
         num_critic_obs,
         num_actions=8 + 12 + 30, # latent, prev action, state
         num_latent=8,
-        actor_hidden_dims=[128, 128],
+        policy_hidden_dims=[128, 128],
         encoder_hidden_dims=[256, 128],
         critic_hidden_dims=[256, 256, 256],
         activation="elu",
@@ -28,23 +28,23 @@ class RMA1(nn.Module):
     ):
         if kwargs:
             print(
-                "ActorCritic.__init__ got unexpected arguments, which will be ignored: "
+                "RMA1.__init__ got unexpected arguments, which will be ignored: "
                 + str([key for key in kwargs.keys()])
             )
         super().__init__()
         activation = get_activation(activation)
 
         # Policy
-        actor_layers = []
-        actor_layers.append(nn.Linear(num_policy_obs, actor_hidden_dims[0]))
-        actor_layers.append(activation)
-        for layer_index in range(len(actor_hidden_dims)):
-            if layer_index == len(actor_hidden_dims) - 1:
-                actor_layers.append(nn.Linear(actor_hidden_dims[layer_index], num_actions))
+        policy_layers = []
+        policy_layers.append(nn.Linear(num_policy_obs, policy_hidden_dims[0]))
+        policy_layers.append(activation)
+        for layer_index in range(len(policy_hidden_dims)):
+            if layer_index == len(policy_hidden_dims) - 1:
+                policy_layers.append(nn.Linear(policy_hidden_dims[layer_index], num_actions))
             else:
-                actor_layers.append(nn.Linear(actor_hidden_dims[layer_index], actor_hidden_dims[layer_index + 1]))
-                actor_layers.append(activation)
-        self.actor = nn.Sequential(*actor_layers)
+                policy_layers.append(nn.Linear(policy_hidden_dims[layer_index], policy_hidden_dims[layer_index + 1]))
+                policy_layers.append(activation)
+        self.policy = nn.Sequential(*policy_layers)
 
         # Env Factor Encoder
         encoder = []
@@ -56,7 +56,7 @@ class RMA1(nn.Module):
             else:
                 encoder.append(nn.Linear(encoder_hidden_dims[layer_index], encoder_hidden_dims[layer_index + 1]))
                 encoder.append(activation)
-        self.critic = nn.Sequential(*encoder)
+        self.encoder = nn.Sequential(*encoder)
 
          # Value function
         critic_layers = []
