@@ -9,15 +9,18 @@ import torch.nn as nn
 from torch.distributions import Normal
 
 
-class ActorCritic(nn.Module):
+class RMA1(nn.Module):
     is_recurrent = False
 
     def __init__(
         self,
-        num_actor_obs,
+        num_policy_obs, # latent size
+        num_encoder_obs, #17 in paper
         num_critic_obs,
-        num_actions,
-        actor_hidden_dims=[256, 256, 256],
+        num_actions=8 + 12 + 30, # latent, prev action, state
+        num_latent=8,
+        actor_hidden_dims=[128, 128],
+        encoder_hidden_dims=[256, 128],
         critic_hidden_dims=[256, 256, 256],
         activation="elu",
         init_noise_std=1.0,
@@ -31,11 +34,9 @@ class ActorCritic(nn.Module):
         super().__init__()
         activation = get_activation(activation)
 
-        mlp_input_dim_a = num_actor_obs
-        mlp_input_dim_c = num_critic_obs
         # Policy
         actor_layers = []
-        actor_layers.append(nn.Linear(mlp_input_dim_a, actor_hidden_dims[0]))
+        actor_layers.append(nn.Linear(num_policy_obs, actor_hidden_dims[0]))
         actor_layers.append(activation)
         for layer_index in range(len(actor_hidden_dims)):
             if layer_index == len(actor_hidden_dims) - 1:
@@ -45,9 +46,21 @@ class ActorCritic(nn.Module):
                 actor_layers.append(activation)
         self.actor = nn.Sequential(*actor_layers)
 
-        # Value function
+        # Env Factor Encoder
+        encoder = []
+        encoder.append(nn.Linear(num_encoder_obs, encoder_hidden_dims[0]))
+        encoder.append(activation)
+        for layer_index in range(len(encoder_hidden_dims)):
+            if layer_index == len(encoder_hidden_dims) - 1:
+                encoder.append(nn.Linear(encoder_hidden_dims[layer_index], num_latent))
+            else:
+                encoder.append(nn.Linear(encoder_hidden_dims[layer_index], encoder_hidden_dims[layer_index + 1]))
+                encoder.append(activation)
+        self.critic = nn.Sequential(*encoder)
+
+         # Value function
         critic_layers = []
-        critic_layers.append(nn.Linear(mlp_input_dim_c, critic_hidden_dims[0]))
+        critic_layers.append(nn.Linear(num_critic_obs, critic_hidden_dims[0]))
         critic_layers.append(activation)
         for layer_index in range(len(critic_hidden_dims)):
             if layer_index == len(critic_hidden_dims) - 1:
