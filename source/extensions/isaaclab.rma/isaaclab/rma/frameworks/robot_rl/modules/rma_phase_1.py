@@ -7,20 +7,18 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
+from isaaclab.rma.frameworks.robot_rl.modules import ActorCritic
 
-
-class RMA1(nn.Module):
+class RMA1(ActorCritic):
     is_recurrent = False
 
     def __init__(
         self,
-        num_policy_obs, # latent size
-        num_encoder_obs, #17 in paper
+        num_actor_obs,
         num_critic_obs,
-        num_actions=8 + 12 + 30, # latent, prev action, state
-        num_latent=8,
-        policy_hidden_dims=[128, 128],
-        encoder_hidden_dims=[256, 128],
+        num_actions,
+        actor_hidden_dims=[128, 128],
+        encoder_hidden_dims=[256, 128, 8],
         critic_hidden_dims=[256, 256, 256],
         activation="elu",
         init_noise_std=1.0,
@@ -31,28 +29,30 @@ class RMA1(nn.Module):
                 "RMA1.__init__ got unexpected arguments, which will be ignored: "
                 + str([key for key in kwargs.keys()])
             )
-        super().__init__()
+        torch.nn.Module.__init__(self)
         activation = get_activation(activation)
+
+        num_policy_obs = 48 # HARDCODED
 
         # Policy
         policy_layers = []
-        policy_layers.append(nn.Linear(num_policy_obs, policy_hidden_dims[0]))
+        policy_layers.append(nn.Linear(num_policy_obs, actor_hidden_dims[0]))
         policy_layers.append(activation)
-        for layer_index in range(len(policy_hidden_dims)):
-            if layer_index == len(policy_hidden_dims) - 1:
-                policy_layers.append(nn.Linear(policy_hidden_dims[layer_index], num_actions))
+        for layer_index in range(len(actor_hidden_dims)):
+            if layer_index == len(actor_hidden_dims) - 1:
+                policy_layers.append(nn.Linear(actor_hidden_dims[layer_index], num_actions))
             else:
-                policy_layers.append(nn.Linear(policy_hidden_dims[layer_index], policy_hidden_dims[layer_index + 1]))
+                policy_layers.append(nn.Linear(actor_hidden_dims[layer_index], actor_hidden_dims[layer_index + 1]))
                 policy_layers.append(activation)
         self.policy = nn.Sequential(*policy_layers)
 
         # Env Factor Encoder
         encoder = []
-        encoder.append(nn.Linear(num_encoder_obs, encoder_hidden_dims[0]))
+        encoder.append(nn.Linear(num_policy_obs, encoder_hidden_dims[0]))
         encoder.append(activation)
         for layer_index in range(len(encoder_hidden_dims)):
             if layer_index == len(encoder_hidden_dims) - 1:
-                encoder.append(nn.Linear(encoder_hidden_dims[layer_index], num_latent))
+                encoder.append(nn.Linear(encoder_hidden_dims[layer_index], encoder_hidden_dims[-1]))
             else:
                 encoder.append(nn.Linear(encoder_hidden_dims[layer_index], encoder_hidden_dims[layer_index + 1]))
                 encoder.append(activation)
@@ -97,23 +97,32 @@ class RMA1(nn.Module):
     def forward(self):
         raise NotImplementedError
 
-    # RMA's "actor" which includes the encoder and policy
-    def _act(self, obs):
-        z = self.encoder(obs)
-        policy_input = torch.cat([z, obs], dim=-1)
-        return self.policy(policy_input)
-        raise NotImplementedError
+    def update_distribution(self, observations):
+        obs_e = observations[:, :160]
+        obs_policy = observations[:, 160:]
+        z = self.get_latent(obs_e)
+        policy_input = torch.cat([z, obs_policy], dim=-1)
+        mean = self.policy(policy_input)
+        self.distribution = Normal(mean, mean * 0.0 + self.std)
 
     def act(self, observations, **kwargs):
-        return self._act(observations)
+        self.update_distribution(observations)
+        return self.distribution.sample()
+
+    def get_actions_log_prob(self, actions):
+        return self.distribution.log_prob(actions).sum(dim=-1)
 
     def act_inference(self, observations):
-        return self._act(observations)
+        actions_mean = self.actor(observations)
+        return actions_mean
 
     def evaluate(self, critic_observations, **kwargs):
         value = self.critic(critic_observations)
         return value
-
+    
+    def get_latent(self, encoder_observations):
+        return self.encoder(encoder_observations)
+    
 
 def get_activation(act_name):
     if act_name == "elu":

@@ -22,7 +22,7 @@ from isaaclab.rma.frameworks.robot_rl.modules import (
 from isaaclab.rma.frameworks.robot_rl.utils import store_code_state
 
 
-class OnPolicyRunner:
+class RMA1Runner:
     """On-policy runner for training and evaluation."""
 
     def __init__(self, env: VecEnv, train_cfg, log_dir=None, device="cpu"):
@@ -38,7 +38,7 @@ class OnPolicyRunner:
         else:
             num_critic_obs = num_obs
         actor_critic_class = eval(self.policy_cfg.pop("class_name"))  # ActorCritic
-        actor_critic: ActorCritic | ActorCriticRecurrent = actor_critic_class(
+        actor_critic: RMA1 = actor_critic_class(
             num_obs, num_critic_obs, self.env.num_actions, **self.policy_cfg
         ).to(self.device)
         alg_class = eval(self.alg_cfg.pop("class_name"))  # PPO

@@ -12,6 +12,10 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
     RslRlPpoAlgorithmCfg,
 )
 
+@configclass
+class RmaActorCriticsCfg(RslRlPpoActorCriticCfg):
+    encoder_hidden_dims: list[int] = MISSING
+
 def export_policy_as_onnx(actor_critic: object, path: str, filename="policy.onnx", verbose=False) -> None:
     """Export policy into a Torch ONNX file.
 
