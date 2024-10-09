@@ -17,6 +17,9 @@ class RMA1(ActorCritic):
         num_actor_obs,
         num_critic_obs,
         num_actions,
+        env_size,
+        prev_step_size,
+        z_size,
         actor_hidden_dims=[128, 128],
         encoder_hidden_dims=[256, 128, 8],
         critic_hidden_dims=[256, 256, 256],
@@ -32,23 +35,24 @@ class RMA1(ActorCritic):
         torch.nn.Module.__init__(self)
         activation = get_activation(activation)
 
-        num_policy_obs = 48 # HARDCODED
+        num_policy_obs = prev_step_size + z_size # HARDCODED
+        num_env_obs = env_size # currently just the 187 from the height scanner
 
         # Policy
-        policy_layers = []
-        policy_layers.append(nn.Linear(num_policy_obs, actor_hidden_dims[0]))
-        policy_layers.append(activation)
+        actor_layers = []
+        actor_layers.append(nn.Linear(num_policy_obs, actor_hidden_dims[0]))
+        actor_layers.append(activation)
         for layer_index in range(len(actor_hidden_dims)):
             if layer_index == len(actor_hidden_dims) - 1:
-                policy_layers.append(nn.Linear(actor_hidden_dims[layer_index], num_actions))
+                actor_layers.append(nn.Linear(actor_hidden_dims[layer_index], num_actions))
             else:
-                policy_layers.append(nn.Linear(actor_hidden_dims[layer_index], actor_hidden_dims[layer_index + 1]))
-                policy_layers.append(activation)
-        self.policy = nn.Sequential(*policy_layers)
+                actor_layers.append(nn.Linear(actor_hidden_dims[layer_index], actor_hidden_dims[layer_index + 1]))
+                actor_layers.append(activation)
+        self.actor = nn.Sequential(*actor_layers)
 
         # Env Factor Encoder
         encoder = []
-        encoder.append(nn.Linear(num_policy_obs, encoder_hidden_dims[0]))
+        encoder.append(nn.Linear(num_env_obs, encoder_hidden_dims[0]))
         encoder.append(activation)
         for layer_index in range(len(encoder_hidden_dims)):
             if layer_index == len(encoder_hidden_dims) - 1:
@@ -98,11 +102,11 @@ class RMA1(ActorCritic):
         raise NotImplementedError
 
     def update_distribution(self, observations):
-        obs_e = observations[:, :160]
-        obs_policy = observations[:, 160:]
+        obs_e = observations[:, :187]
+        obs_actor = observations[:, 187:]
         z = self.get_latent(obs_e)
-        policy_input = torch.cat([z, obs_policy], dim=-1)
-        mean = self.policy(policy_input)
+        actor_input = torch.cat([z, obs_actor], dim=-1)
+        mean = self.actor(actor_input)
         self.distribution = Normal(mean, mean * 0.0 + self.std)
 
     def act(self, observations, **kwargs):

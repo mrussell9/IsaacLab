@@ -22,6 +22,9 @@ class SpotFlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     policy = RmaActorCriticsCfg(
         class_name="RMA1",
         init_noise_std=1.0,
+        env_size=187,
+        prev_step_size=48,
+        z_size=8,
         actor_hidden_dims=[512, 256, 128],
         encoder_hidden_dims=[256, 128, 8],
         critic_hidden_dims=[512, 256, 128],

@@ -46,9 +46,9 @@ import os
 import torch
 from datetime import datetime
 
-from isaaclab.rma.frameworks.robot_rl.runners import base_policy_runner
+from isaaclab.rma.frameworks.robot_rl.runners import BasePolicyRunner
 
-Runner = base_policy_runner
+Runner = BasePolicyRunner
 
 from omni.isaac.lab.envs import DirectRLEnvCfg, ManagerBasedRLEnvCfg
 from omni.isaac.lab.utils.dict import print_dict

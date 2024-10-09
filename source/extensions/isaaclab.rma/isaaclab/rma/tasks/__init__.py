@@ -3,7 +3,7 @@ from . import rma_cfg, rma_ppo_cfg
 
 # Go1 Baseline
 gym.register(
-    id="RMA-Baseline-Spot-v0",
+    id="RMA-Spot-v0",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -13,7 +13,7 @@ gym.register(
 )
 
 gym.register(
-    id="RMA-Baseline-Play-Spot-v0",
+    id="RMA-Play-Spot-v0",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
