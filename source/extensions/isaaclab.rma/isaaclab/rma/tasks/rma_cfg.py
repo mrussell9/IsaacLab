@@ -411,7 +411,7 @@ class SpotRmaCfg(ManagerBasedRLEnvCfg):
                 self.scene.terrain.terrain_generator.curriculum = False
 
 
-class SpotFlatEnvCfg_PLAY(SpotFlatEnvCfg):
+class SpotRmaCfg_PLAY(SpotRmaCfg):
     def __post_init__(self) -> None:
         # post init of parent
         super().__post_init__()

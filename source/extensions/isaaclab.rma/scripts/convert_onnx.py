@@ -18,7 +18,7 @@ parser.add_argument(
 parser.add_argument("--estimator", action="store_true", default=False, help="Load estimator during conversion.")
 parser.add_argument("--symmetric", action="store_true", default=False, help="Enforce value symmetry during training.")
 # append RSL-RL cli arguments
-cli_args.add_rsl_rl_args(parser)
+cli_args.add_rma_args(parser)
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
@@ -67,7 +67,7 @@ def convert_policy():
     env_cfg: ManagerBasedRLEnvCfg = parse_env_cfg(
         args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
     )
-    agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rsl_rl_cfg(args_cli.task, args_cli)
+    agent_cfg: RslRlOnPolicyRunnerCfg = cli_args.parse_rma_cfg(args_cli.task, args_cli)
     # create isaac environment
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
 
