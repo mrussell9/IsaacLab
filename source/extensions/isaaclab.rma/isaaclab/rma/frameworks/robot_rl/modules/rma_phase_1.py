@@ -52,7 +52,7 @@ class RMA1(ActorCritic):
 
         # Env Factor Encoder
         encoder = []
-        encoder.append(nn.Linear(num_env_obs, encoder_hidden_dims[0]))
+        encoder.append(nn.Linear(self.num_env_obs, encoder_hidden_dims[0]))
         encoder.append(activation)
         for layer_index in range(len(encoder_hidden_dims)):
             if layer_index == len(encoder_hidden_dims) - 1:
