@@ -22,17 +22,36 @@ from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 import omni.isaac.lab_tasks.manager_based.locomotion.velocity.config.spot.mdp as spot_mdp
 import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
+import isaaclab.rma.mdp as rma_mdp
 
 ##
 # Pre-defined configs
 ##
 from omni.isaac.lab_assets.spot import SPOT_CFG  # isort: skip
 
+# COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
+#     size=(8.0, 8.0), #subterrain size
+#     border_width=20.0,
+#     num_rows=9,
+#     num_cols=21,
+#     horizontal_scale=0.1,
+#     vertical_scale=0.005,
+#     slope_threshold=0.75,
+#     difficulty_range=(0.0, 1.0),
+#     use_cache=False,
+#     sub_terrains={
+#         "flat": terrain_gen.MeshPlaneTerrainCfg(proportion=0.2),
+#         "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
+#             proportion=0.2, noise_range=(0.02, 0.05), noise_step=0.02, border_width=0.25
+#         ),
+#     },
+# )
+
 COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0), #subterrain size
     border_width=20.0,
-    num_rows=9,
-    num_cols=21,
+    num_rows=10,
+    num_cols=20,
     horizontal_scale=0.1,
     vertical_scale=0.005,
     slope_threshold=0.75,
@@ -40,8 +59,33 @@ COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     use_cache=False,
     sub_terrains={
         "flat": terrain_gen.MeshPlaneTerrainCfg(proportion=0.2),
+        "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
+            proportion=0.2,
+            step_height_range=(0.05, 0.23),
+            step_width=0.3,
+            platform_width=3.0,
+            border_width=1.0,
+            holes=False,
+        ),
+        "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
+            proportion=0.2,
+            step_height_range=(0.05, 0.23),
+            step_width=0.3,
+            platform_width=3.0,
+            border_width=1.0,
+            holes=False,
+        ),
+        "boxes": terrain_gen.MeshRandomGridTerrainCfg(
+            proportion=0.2, grid_width=0.45, grid_height_range=(0.05, 0.2), platform_width=2.0
+        ),
         "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
-            proportion=0.2, noise_range=(0.02, 0.05), noise_step=0.02, border_width=0.25
+            proportion=0.2, noise_range=(0.02, 0.10), noise_step=0.02, border_width=0.25
+        ),
+        "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
+            proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
+        ),
+        "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(
+            proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
         ),
     },
 )
@@ -142,6 +186,16 @@ class ObservationsCfg:
             params={"sensor_cfg": SceneEntityCfg("height_scanner")},
             noise=Unoise(n_min=-0.1, n_max=0.1),
             clip=(-1.0, 1.0),
+        )
+        foot_force = ObsTerm(
+            func=rma_mdp.contact_sensor,
+            params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot")},
+            noise=Unoise(n_min=-5, n_max=5),
+        )
+        ground_friction = ObsTerm(
+            func=rma_mdp.contact_friction,
+            params={"asset_cfg": SceneEntityCfg("robot", body_names=".*_foot")},
+            noise=Unoise(n_min=-0.01, n_max=0.01)
         )
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1))
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
@@ -355,10 +409,8 @@ class SpotTerminationsCfg:
 class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
-    # terrain_levels = CurrTerm(func=mdp.terrain_levels_vel)
-
-    pass
-
+    terrain_levels = CurrTerm(func=rma_mdp.terrain_levels_vel)
+    
 
 ##
 # Environment configuration

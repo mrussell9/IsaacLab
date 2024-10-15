@@ -36,7 +36,7 @@ class RMA1(ActorCritic):
         activation = get_activation(activation)
 
         num_policy_obs = prev_step_size + z_size # HARDCODED
-        num_env_obs = env_size # currently just the 187 from the height scanner
+        self.num_env_obs = env_size
 
         # Policy
         actor_layers = []
@@ -102,8 +102,8 @@ class RMA1(ActorCritic):
         raise NotImplementedError
 
     def update_distribution(self, observations):
-        obs_e = observations[:, :187]
-        obs_actor = observations[:, 187:]
+        obs_e = observations[:, :self.num_env_obs]
+        obs_actor = observations[:, self.num_env_obs:]
         z = self.get_latent(obs_e)
         actor_input = torch.cat([z, obs_actor], dim=-1)
         mean = self.actor(actor_input)
