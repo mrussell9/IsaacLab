@@ -434,15 +434,15 @@ class SpotRmaCfg(ManagerBasedRLEnvCfg):
     curriculum: CurriculumCfg = CurriculumCfg()
 
     # Viewer
-    viewer = ViewerCfg(eye=(10.5, 10.5, 0.3), origin_type="world", env_index=0, asset_name="robot")
+    viewer = ViewerCfg(eye=(2.5, 2.5, 0.5), origin_type="asset_root", env_index=0, asset_name="robot")
 
     def __post_init__(self):
         """Post initialization."""
         # general settings
-        self.decimation = 10 # 50 Hz
+        self.decimation = 4 # 50 Hz
         self.episode_length_s = 20.0
         # simulation settings
-        self.sim.dt = 0.002
+        self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
         self.sim.disable_contact_processing = True
         self.sim.physics_material = self.scene.terrain.physics_material
