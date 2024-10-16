@@ -387,7 +387,15 @@ class RewardsCfg:
         weight=-1.0e-2,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*_h[xy]")},
     )
-
+    foot_impact = RewardTermCfg(
+            func=rma_mdp.foot_impact_penalty, 
+            weight=-40.0, 
+            params={
+                "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"),
+                "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
+                "cutoff": 10.0,
+            }
+        )
 
 @configclass
 class SpotTerminationsCfg:
