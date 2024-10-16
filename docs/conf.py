@@ -127,6 +127,7 @@ autodoc_mock_imports = [
     "warp",
     "pxr",
     "omni.kit",
+    "omni.log",
     "omni.usd",
     "omni.client",
     "omni.physx",
@@ -226,7 +227,7 @@ html_theme_options = {
         {
             "name": "Isaac Sim",
             "url": "https://developer.nvidia.com/isaac-sim",
-            "icon": "https://img.shields.io/badge/IsaacSim-4.1-silver.svg",
+            "icon": "https://img.shields.io/badge/IsaacSim-4.2.0-silver.svg",
             "type": "url",
         },
         {
