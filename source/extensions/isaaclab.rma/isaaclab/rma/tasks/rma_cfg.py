@@ -190,7 +190,7 @@ class ObservationsCfg:
         foot_force = ObsTerm(
             func=rma_mdp.contact_sensor,
             params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot")},
-            noise=Unoise(n_min=-5, n_max=5),
+            # noise=Unoise(n_min=-5, n_max=5),
         )
         ground_friction = ObsTerm(
             func=rma_mdp.contact_friction,
@@ -328,18 +328,18 @@ class RewardsCfg:
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"),
         },
     )
-    gait = RewardTermCfg(
-        func=spot_mdp.GaitReward,
-        weight=10.0,
-        params={
-            "std": 0.1,
-            "max_err": 0.2,
-            "velocity_threshold": 0.5,
-            "synced_feet_pair_names": (("fl_foot", "hr_foot"), ("fr_foot", "hl_foot")),
-            "asset_cfg": SceneEntityCfg("robot"),
-            "sensor_cfg": SceneEntityCfg("contact_forces"),
-        },
-    )
+    # gait = RewardTermCfg(
+    #     func=spot_mdp.GaitReward,
+    #     weight=10.0,
+    #     params={
+    #         "std": 0.1,
+    #         "max_err": 0.2,
+    #         "velocity_threshold": 0.5,
+    #         "synced_feet_pair_names": (("fl_foot", "hr_foot"), ("fr_foot", "hl_foot")),
+    #         "asset_cfg": SceneEntityCfg("robot"),
+    #         "sensor_cfg": SceneEntityCfg("contact_forces"),
+    #     },
+    # )
 
     # -- penalties
     action_smoothness = RewardTermCfg(func=spot_mdp.action_smoothness_penalty, weight=-1.0)
@@ -356,7 +356,7 @@ class RewardsCfg:
     )
     foot_slip = RewardTermCfg(
         func=spot_mdp.foot_slip_penalty,
-        weight=-2.0,
+        weight=-0.4,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"),
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot"),
@@ -404,7 +404,7 @@ class SpotTerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     body_contact = DoneTerm(
         func=mdp.illegal_contact,
-        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=["body", ".*leg"]), "threshold": 1.0},
+        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=["body", ".*uleg"]), "threshold": 1.0},
     )
     terrain_out_of_bounds = DoneTerm(
         func=mdp.terrain_out_of_bounds,
@@ -442,7 +442,7 @@ class SpotRmaCfg(ManagerBasedRLEnvCfg):
     curriculum: CurriculumCfg = CurriculumCfg()
 
     # Viewer
-    viewer = ViewerCfg(eye=(2.5, 2.5, 0.5), origin_type="asset_root", env_index=0, asset_name="robot")
+    viewer = ViewerCfg(eye=(7.5, 7.5, 1.5), origin_type="agent_root", env_index=2048, asset_name="robot")
 
     def __post_init__(self):
         """Post initialization."""
