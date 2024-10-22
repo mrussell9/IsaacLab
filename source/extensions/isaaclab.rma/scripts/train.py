@@ -13,7 +13,7 @@ import cli_args  # isort: skip
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
-parser.add_argument("--phase", required=True, help="Phase of RMA to train")
+parser.add_argument("--phase", type=int, required=True, help="Phase of RMA to train")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument("--video_interval", type=int, default=12_000, help="Interval between video recordings (in steps).")
@@ -54,9 +54,16 @@ from datetime import datetime
 
 from isaaclab.rma.frameworks.robot_rl.runners import BasePolicyRunner, AdaptionModuleRunner
 
-if args_cli.phase == "1":
+assert args_cli.phase in [1,2], "Phase argument must be set to 1 or 2"
+
+if args_cli.phase == 1:
     Runner = BasePolicyRunner
-elif args_cli.phase == "2":
+elif args_cli.phase == 2:
+    model_test = False
+    if args_cli.resume or args_cli.wandb:
+        model_test = True
+    assert model_test == True, "Running phase 2 requires a base policy. Please specify a model to load by passing \
+                                --resume or --wandb"
     Runner = AdaptionModuleRunner
 
 from omni.isaac.lab.envs import DirectRLEnvCfg, ManagerBasedRLEnvCfg
