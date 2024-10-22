@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 import os
 import yaml
-
+import shutil
 
 def add_rma_args(parser: argparse.ArgumentParser):
     """Add RSL-RL arguments to the parser.
@@ -110,4 +110,38 @@ def pull_policy_from_wandb(save_dir: str, run_path: str, model_name: str) -> tup
     # pull wandb model config
     print("[INFO] Pulling policy config from wandb")
     env_cfg = wandb_run.config["env_cfg"]
+    return resume_path, env_cfg
+
+def load_wandb_policy(run_path: str, model_name: str, log_root_path: str, log_dir: str) -> tuple[str, dict]:
+    if run_path == "":
+        run_path = input(
+            "\033[96mEnter the Weights and Biases run path located on the Overview panel; i.e"
+            " usr/Spot-Blind/abc123\033[0m\n"
+        )
+    while True:
+        if model_name == "":
+            model_name = input(
+                "\n\033[96mEnter the name of the model file to download; i.e model_100.pt \n"
+                + "Press Enter again without a file name to quit.\033[0m\n"
+            )
+        if model_name == "":
+            return
+        if model_name[:6] != "model_":
+            model_name = "model_" + model_name
+        if model_name[-3:] != ".pt":
+            model_name += ".pt"
+        try:
+            resume_path, env_cfg = pull_policy_from_wandb(log_root_path, run_path, model_name)
+            print(f"\033[92m\n[INFO] added policy to load\033[0m")
+            model_file_name = os.path.splitext(os.path.basename(resume_path))[0]
+            model_dir = os.path.join(log_dir, run_path.split("/")[-1])
+            os.makedirs(model_dir, exist_ok=True)
+            shutil.copy2(f"{resume_path}", f"{model_dir}/{model_file_name}.pt")
+            break
+        except Exception:
+            print(
+                "\n\033[91m[WARN] Unable to download from Weights and Biases, is the path"
+                " and filename correct?\033[0m"
+            )
+
     return resume_path, env_cfg

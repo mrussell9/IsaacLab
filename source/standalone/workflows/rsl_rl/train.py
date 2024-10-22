@@ -49,7 +49,7 @@ import os
 import torch
 from datetime import datetime
 
-from rsl_rl.runners import RMA1Runner
+from rsl_rl.runners import OnPolicyRunner
 
 from omni.isaac.lab.envs import (
     DirectMARLEnv,
@@ -124,7 +124,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env = RslRlVecEnvWrapper(env)
 
     # create runner from rsl-rl
-    runner = RMA1Runner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
+    runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
     # write git state to logs
     runner.add_git_repo_to_log(__file__)
     # load the checkpoint
@@ -151,3 +151,4 @@ if __name__ == "__main__":
     main()
     # close sim app
     simulation_app.close()
+    
