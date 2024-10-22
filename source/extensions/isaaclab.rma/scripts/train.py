@@ -13,6 +13,7 @@ import cli_args  # isort: skip
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
+parser.add_argument("--phase", required=True, help="Phase of RMA to train")
 parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
 parser.add_argument("--video_interval", type=int, default=12_000, help="Interval between video recordings (in steps).")
@@ -20,6 +21,9 @@ parser.add_argument("--num_envs", type=int, default=None, help="Number of enviro
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
+parser.add_argument("--wandb", action="store_true", default=False, help="Plot with model from WandB.")
+parser.add_argument("--wandb_run", type=str, default="", help="Run from WandB.")
+parser.add_argument("--wandb_model", type=str, default="", help="Model from WandB.")
 # append RSL-RL cli arguments
 cli_args.add_rma_args(parser)
 # append AppLauncher cli args
@@ -27,6 +31,7 @@ AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
 args_cli.headless = True
 args_cli.video = True
+args_cli.wandb = True if "" not in [args_cli.wandb_run, args_cli.wandb_model] else args_cli.wandb
 
 # always enable cameras to record video
 if args_cli.video:
@@ -44,11 +49,15 @@ simulation_app = app_launcher.app
 import gymnasium as gym
 import os
 import torch
+import shutil
 from datetime import datetime
 
-from isaaclab.rma.frameworks.robot_rl.runners import BasePolicyRunner
+from isaaclab.rma.frameworks.robot_rl.runners import BasePolicyRunner, AdaptionModuleRunner
 
-Runner = BasePolicyRunner
+if args_cli.phase == "1":
+    Runner = BasePolicyRunner
+elif args_cli.phase == "2":
+    Runner = AdaptionModuleRunner
 
 from omni.isaac.lab.envs import DirectRLEnvCfg, ManagerBasedRLEnvCfg
 from omni.isaac.lab.utils.dict import print_dict
@@ -113,9 +122,49 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg, agent_cfg: RslRlOnPolic
     # save resume path before creating a new log_dir
     if agent_cfg.resume:
         # get path to previous checkpoint
-        resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
+        resume_path = args_cli.checkpoint #resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-        # load previously trained model
+
+    elif args_cli.wandb:
+        # load the policy
+        resume_path = ""
+        env_cfg = None
+        # load configuration
+        run_path = args_cli.wandb_run
+        if run_path == "":
+            run_path = input(
+                "\033[96mEnter the Weights and Biases run path located on the Overview panel; i.e"
+                " usr/Spot-Blind/abc123\033[0m\n"
+            )
+        while True:
+            model_name = args_cli.wandb_model
+            if model_name == "":
+                model_name = input(
+                    "\n\033[96mEnter the name of the model file to download; i.e model_100.pt \n"
+                    + "Press Enter again without a file name to quit.\033[0m\n"
+                )
+            if model_name == "":
+                return
+            if model_name[:6] != "model_":
+                model_name = "model_" + model_name
+            if model_name[-3:] != ".pt":
+                model_name += ".pt"
+            try:
+                resume_path, env_cfg = cli_args.pull_policy_from_wandb(log_root_path, run_path, model_name)
+                print(f"\033[92m\n[INFO] added policy to load\033[0m")
+                model_file_name = os.path.splitext(os.path.basename(resume_path))[0]
+                model_dir = os.path.join(log_dir, run_path.split("/")[-1])
+                os.makedirs(model_dir, exist_ok=True)
+                shutil.copy2(f"{resume_path}", f"{model_dir}/{model_file_name}.pt")
+                break
+            except Exception:
+                print(
+                    "\n\033[91m[WARN] Unable to download from Weights and Biases, is the path"
+                    " and filename correct?\033[0m"
+                )
+
+    if agent_cfg.resume or args_cli.wandb:
+        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
         runner.load(resume_path)
 
     # dump the configuration into log-directory

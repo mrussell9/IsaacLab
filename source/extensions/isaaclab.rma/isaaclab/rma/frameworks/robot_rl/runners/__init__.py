@@ -5,5 +5,6 @@
 
 from .on_policy_runner import OnPolicyRunner
 from .base_policy_runner import BasePolicyRunner
+from.adaption_module_runner import AdaptionModuleRunner
 
 __all__ = ["OnPolicyRunner", "BasePolicyRunner"]
