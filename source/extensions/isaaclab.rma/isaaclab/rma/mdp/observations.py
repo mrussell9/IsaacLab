@@ -49,3 +49,23 @@ class contact_friction(ManagerTermBase):
     
     def __call__(self, env: ManagerBasedRLEnvCfg, asset_cfg: SceneEntityCfg) -> torch.Tensor:
         return self.friction.clone()
+
+class HistoryObsWrapper(ManagerTermBase):
+    def __init__(self, env: ManagerBasedRLEnvCfg, cfg: ObservationTermCfg) -> None:
+        super().__init__(cfg, env)
+        self.func = self.cfg.params["func"]
+        if isinstance(self.func, ManagerTermBase):
+            self.func = self.func(env, cfg)
+        self.obs_len = self.func(env, **self.cfg.params["func_params"]).size(-1)   # TODO generalize this to multiD obs
+        self.history_len = self.cfg.params["history_len"]
+        self.data = torch.zeros(self.num_envs, self.history_len, self.obs_len, device=self.device)
+
+    def reset(self, env_ids: torch.Tensor = None) -> None:
+        if isinstance(self.func, ManagerTermBase):
+            self.func.reset(env_ids)
+        self.data[env_ids] = self.func(self._env, **self.cfg.params["func_params"])[env_ids].view(-1, 1, self.obs_len).expand(-1, self.history_len, -1)
+
+    def __call__(self, env, func, history_len, func_params) -> torch.Tensor:
+        self.data = self.data.roll(1, dims=1)
+        self.data[:, 0] = self.func(self._env, **self.cfg.params["func_params"])
+        return self.data.clone().flatten(start_dim=1)

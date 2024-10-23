@@ -19,6 +19,17 @@ class RmaActorCriticsCfg(RslRlPpoActorCriticCfg):
     prev_step_size: int = MISSING
     z_size: int = MISSING
 
+@configclass
+class BcAlgorithmCfg:
+    class_name: str = "BC"
+    learning_rate: float = MISSING
+    num_learning_epochs: int = MISSING
+    num_mini_batches: int = MISSING
+
+@configclass
+class BcRunnerCfg(RslRlOnPolicyRunnerCfg):
+    teacher: RmaActorCriticsCfg = MISSING
+
 def export_policy_as_onnx(actor_critic: object, path: str, filename="policy.onnx", verbose=False) -> None:
     """Export policy into a Torch ONNX file.
 

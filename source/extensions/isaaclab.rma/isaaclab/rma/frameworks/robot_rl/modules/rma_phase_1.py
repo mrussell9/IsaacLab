@@ -38,7 +38,7 @@ class RMA1(ActorCritic):
         num_policy_obs = prev_step_size + z_size # HARDCODED
         self.num_env_obs = env_size
 
-        # Policy
+        # Actor
         actor_layers = []
         actor_layers.append(nn.Linear(num_policy_obs, actor_hidden_dims[0]))
         actor_layers.append(activation)
@@ -102,9 +102,8 @@ class RMA1(ActorCritic):
         raise NotImplementedError
 
     def update_distribution(self, observations):
-        obs_e = observations[:, :self.num_env_obs]
         obs_actor = observations[:, self.num_env_obs:]
-        z = self.get_latent(obs_e)
+        z = self.get_latent(observations)
         actor_input = torch.cat([z, obs_actor], dim=-1)
         mean = self.actor(actor_input)
         self.distribution = Normal(mean, mean * 0.0 + self.std)
@@ -117,14 +116,18 @@ class RMA1(ActorCritic):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
     def act_inference(self, observations):
-        actions_mean = self.actor(observations)
+        obs_actor = observations[:, self.num_env_obs:]
+        z = self.get_latent(observations)
+        actor_input = torch.cat([z, obs_actor], dim=-1)
+        actions_mean = self.actor(actor_input)
         return actions_mean
 
     def evaluate(self, critic_observations, **kwargs):
         value = self.critic(critic_observations)
         return value
     
-    def get_latent(self, encoder_observations):
+    def get_latent(self, observations):
+        encoder_observations = observations[:, :self.num_env_obs]
         return self.encoder(encoder_observations)
     
 

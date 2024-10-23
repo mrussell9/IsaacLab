@@ -1,55 +1,68 @@
 from __future__ import annotations
 
-import wandb
-import argparse
 import torch
 import torch.nn as nn
-from torchinfo import summary
-import isaaclab.rma.frameworks.robot_rl as robot_rl
-from isaaclab.rma.frameworks.robot_rl.algorithms import PPO
-from isaaclab.rma.frameworks.robot_rl.env import VecEnv
-from isaaclab.rma.frameworks.robot_rl.modules import (
-    ActorCritic,
-    ActorCriticRecurrent,
-    EmpiricalNormalization,
-    RMA1,
-)
-
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
-    RslRlOnPolicyRunnerCfg,
-    RslRlPpoActorCriticCfg,
-    RslRlPpoAlgorithmCfg,
-)
+from torch.distributions import Normal
+from isaaclab.rma.frameworks.robot_rl.modules import ActorCritic
 
 
-class RMA2(nn.Module):
-    def __init__(self,
-                 model,
-                 encoder_hidden_dims=[128],
-                 encoder_out=32,
-                 activation="elu",
-                 **kwargs,
+class RMA2(ActorCritic):
+    def __init__(
+        self,
+        num_actor_obs,
+        num_critic_obs,
+        num_actions,
+        env_size,
+        prev_step_size,
+        z_size,
+        actor_hidden_dims=[128, 128],
+        encoder_hidden_dims=[128, 32],
+        activation="elu",
+        init_noise_std=1.0,
+        **kwargs,
     ):
-        super().__init__()
         if kwargs:
             print(
-                "RMA1.__init__ got unexpected arguments, which will be ignored: "
+                "RMA2.__init__ got unexpected arguments, which will be ignored: "
                 + str([key for key in kwargs.keys()])
             )
+        torch.nn.Module.__init__(self)
         # Spot_RMA/runs/ll3q83hn/
         activation = get_activation(activation)
+        num_policy_obs = prev_step_size + z_size # HARDCODED
+        self.num_env_obs = env_size
+        
+        # Fix Hard Coding Later
+        conv_layer_params=[[32, 32, 8, 4], [32, 32, 5, 1], [32, 32, 5, 1]]
 
-        # Phase2 Prev States and Actions Encoder, phi
-        phi = []
-        phi.append(nn.Linear(self.num_env_obs, encoder_hidden_dims[0]))
-        phi.append(activation)
-        for layer_index in range(len(phi_hidden_dims)):
-            if layer_index == len(phi_hidden_dims) - 1:
-                phi.append(nn.Linear(phi_hidden_dims[layer_index], phi_hidden_dims[-1]))
+        # Actor
+        actor_layers = []
+        actor_layers.append(nn.Linear(num_policy_obs, actor_hidden_dims[0]))
+        actor_layers.append(activation)
+        for layer_index in range(len(actor_hidden_dims)):
+            if layer_index == len(actor_hidden_dims) - 1:
+                actor_layers.append(nn.Linear(actor_hidden_dims[layer_index], num_actions))
             else:
-                phiappend(nn.Linear(phi_hidden_dims[layer_index], phi_hidden_dims[layer_index + 1]))
-                phiappend(activation)
-        self.phi = nn.Sequential(*phi)
+                actor_layers.append(nn.Linear(actor_hidden_dims[layer_index], actor_hidden_dims[layer_index + 1]))
+                actor_layers.append(activation)
+        self.actor = nn.Sequential(*actor_layers)
+        
+        # Phase2 Prev States and Actions Encoder
+        encoder = []
+        encoder.append(nn.Linear(self.num_env_obs, encoder_hidden_dims[0]))
+        encoder.append(activation)
+        for layer_index in range(len(encoder_hidden_dims)):
+            if layer_index == len(encoder_hidden_dims) - 1:
+                encoder.append(nn.Linear(encoder_hidden_dims[layer_index], encoder_hidden_dims[-1]))
+            else:
+                encoder.append(nn.Linear(encoder_hidden_dims[layer_index], encoder_hidden_dims[layer_index + 1]))
+                encoder.append(activation)
+        self.encoder = nn.Sequential(*encoder)
+        conv_net = []
+        for layer_param in conv_layer_params:
+            conv_net.append(nn.Conv1d(layer_param[0], layer_param[1], layer_param[2], stride=layer_param[3]))
+        self.conv_net = nn.Sequential(*conv_net)
+        self.linear_layer = nn.Linear(32, 8)
 
         # Action noise
         self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
@@ -76,9 +89,8 @@ class RMA2(nn.Module):
         raise NotImplementedError
 
     def update_distribution(self, observations):
-        obs_e = observations[:, :self.num_env_obs]
         obs_actor = observations[:, self.num_env_obs:]
-        z = self.get_latent(obs_e)
+        z = self.get_latent(observations)
         actor_input = torch.cat([z, obs_actor], dim=-1)
         mean = self.actor(actor_input)
         self.distribution = Normal(mean, mean * 0.0 + self.std)
@@ -91,15 +103,18 @@ class RMA2(nn.Module):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
     def act_inference(self, observations):
-        actions_mean = self.actor(observations)
+        obs_actor = observations[:, self.num_env_obs:]
+        z = self.get_latent(observations)
+        actor_input = torch.cat([z, obs_actor], dim=-1)
+        actions_mean = self.actor(actor_input)
         return actions_mean
 
     def evaluate(self, critic_observations, **kwargs):
         value = self.critic(critic_observations)
         return value
     
-    def get_latent(self, encoder_observations):
-        return self.encoder(encoder_observations)
+    def get_latent(self, observations):
+        return self.linear_layer(self.conv_net(self.encoder(observations)).flatten(dim=1))
 
 def get_activation(act_name):
     if act_name == "elu":

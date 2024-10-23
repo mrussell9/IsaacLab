@@ -143,19 +143,19 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg, agent_cfg: RslRlOnPolic
         resume_path, env_cfg = cli_args.load_wandb_policy(run_path, model_name, log_root_path, log_dir)
 
     if agent_cfg.resume:
-        print(f"[INFO]: Resuming model checkpoint from: {resume_path}")
+        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
         runner.load(resume_path)
     
     if args_cli.phase == 2:
         print(f"[INFO]: Loading Base Policy")
         if args_cli.base_policy and not args_cli.wandb:
-            runner.load_base_policy(args_cli.base_policy)
+            runner.load_teacher(args_cli.base_policy)
         elif args_cli.wandb and not args_cli.base_policy:
             # For now you will have to give it a path
             run_path = ""
             model_name = ""
             resume_path, env_cfg = cli_args.load_wandb_policy(run_path, model_name, log_root_path + "/base_policies", log_dir)
-            runner.load_base_policy(resume_path)
+            runner.load_teacher(resume_path)
 
     # dump the configuration into log-directory
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
