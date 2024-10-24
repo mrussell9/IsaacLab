@@ -22,7 +22,7 @@ class SpotRoughBcRunnerCfg(BcRunnerCfg):
     policy = RmaActorCriticsCfg(
         class_name="RMA2",
         init_noise_std=1.0,
-        env_size=201,
+        env_size=2400,
         prev_step_size=48,
         z_size=8,
         actor_hidden_dims=[512, 256, 128],

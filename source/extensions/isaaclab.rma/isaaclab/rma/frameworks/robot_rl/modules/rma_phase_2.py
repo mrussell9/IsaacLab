@@ -16,7 +16,7 @@ class RMA2(ActorCritic):
         prev_step_size,
         z_size,
         actor_hidden_dims=[128, 128],
-        encoder_hidden_dims=[128, 32],
+        encoder_hidden_dims=[512, 32],
         activation="elu",
         init_noise_std=1.0,
         **kwargs,
@@ -60,7 +60,10 @@ class RMA2(ActorCritic):
         self.encoder = nn.Sequential(*encoder)
         conv_net = []
         for layer_param in conv_layer_params:
-            conv_net.append(nn.Conv1d(layer_param[0], layer_param[1], layer_param[2], stride=layer_param[3]))
+            conv_net.append(nn.Conv1d(in_channels=layer_param[0], 
+                                      out_channels=layer_param[1], 
+                                      kernel_size=layer_param[2], 
+                                      stride=layer_param[3]))
         self.conv_net = nn.Sequential(*conv_net)
         self.linear_layer = nn.Linear(32, 8)
 
@@ -114,7 +117,11 @@ class RMA2(ActorCritic):
         return value
     
     def get_latent(self, observations):
-        return self.linear_layer(self.conv_net(self.encoder(observations)).flatten(dim=1))
+        print(observations.shape)
+        x = (self.encoder(observations)).unsqueeze(dim=1)
+        x = (self.conv_net(x))
+        x = self.linear_layer(x)
+        return x
 
 def get_activation(act_name):
     if act_name == "elu":

@@ -35,17 +35,17 @@ class AdaptionModuleRunner:
         self.env = env
         obs, extras = self.env.get_observations()
         num_obs = obs.shape[1]
-        if "critic" in extras["observations"]:
-            num_critic_obs = extras["observations"]["critic"].shape[1]
-        else:
-            num_critic_obs = num_obs
         if "teacher" in extras["observations"]:
             num_teacher_obs = extras["observations"]["teacher"].shape[1]
         else:
             num_teacher_obs = num_obs
+        if "critic" in extras["observations"]:
+            num_critic_obs = extras["observations"]["critic"].shape[1]
+        else:
+            num_critic_obs = num_teacher_obs
         teacher_class = eval(self.teacher_cfg.pop("class_name"))
         teacher: RMA1 = teacher_class(
-            num_obs, num_critic_obs, self.env.num_actions, **self.teacher_cfg
+            num_teacher_obs, num_critic_obs, self.env.num_actions, **self.teacher_cfg
         ).to(self.device)
         actor_critic_class = eval(self.policy_cfg.pop("class_name"))
         actor_critic: RMA2 = actor_critic_class(
@@ -126,7 +126,7 @@ class AdaptionModuleRunner:
             # Rollout
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
-                    actions = self.alg.act_inference(obs)
+                    actions = self.alg.actor_critic.act_inference(obs)
                     obs, rewards, dones, infos = self.env.step(actions)
                     obs = self.obs_normalizer(obs)
                     if "critic" in infos["observations"]:
@@ -285,7 +285,10 @@ class AdaptionModuleRunner:
 
     def load_teacher(self, path):
         loaded_dict = torch.load(path)
+        print("LOADING TEACHER")
+        print(self.alg.teacher)
         self.alg.teacher.load_state_dict(loaded_dict["model_state_dict"])
+        print("STATE_DICT_APPLIED")
         if self.empirical_normalization:
             self.obs_normalizer.load_state_dict(loaded_dict["obs_norm_state_dict"])
             self.critic_obs_normalizer.load_state_dict(loaded_dict["critic_obs_norm_state_dict"])

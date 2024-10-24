@@ -105,3 +105,10 @@ class BC:
         self.storage.clear()
 
         return mse_loss
+
+    def act_inference(self, observations):
+        obs_actor = observations[:, self.num_env_obs:]
+        z = self.get_latent(observations)
+        actor_input = torch.cat([z, obs_actor], dim=-1)
+        actions_mean = self.actor(actor_input)
+        return actions_mean
