@@ -57,7 +57,7 @@ class BcRolloutStorage:
         if self.teacher_observations is not None:
             self.teacher_observations[self.step].copy_(transition.teacher_observations)
         self.dones[self.step].copy_(transition.dones.view(-1, 1))
-        self._save_hidden_states(transition.hidden_states)
+        # self._save_hidden_states(transition.hidden_states)
         self.step += 1
 
     def _save_hidden_states(self, hidden_states):

@@ -19,13 +19,14 @@ class BC:
         self,
         actor_critic,
         teacher,
-        learning_rate=0.0005,
+        gamma=0.998,
+        learning_rate=0.00005,
         num_learning_epochs=1,
         num_mini_batches=1,
         device="cpu",
     ):
         self.device = device
-
+        self.gamma = gamma
         self.learning_rate = learning_rate
 
         # PPO components
@@ -34,6 +35,7 @@ class BC:
         self.teacher = teacher
         self.teacher.to(self.device)
         self.storage = None  # initialized later
+        self.loss_fn = nn.MSELoss()
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
         self.transition = BcRolloutStorage.Transition()
 
@@ -54,29 +56,30 @@ class BC:
         self.actor_critic.train()
         self.teacher.test()
 
-    def act(self, obs, critic_obs):
+    def act(self, obs, teacher_obs):
         if self.actor_critic.is_recurrent:
             self.transition.hidden_states = self.actor_critic.get_hidden_states()
         # Compute the actions and values
-        # self.transition.actions = self.actor_critic.act(obs).detach()
-        # self.transition.values = self.actor_critic.evaluate(critic_obs).detach()
+        self.transition.actions = self.actor_critic.act_inference(obs).detach()
+        # self.transition.values = self.actor_critic.evaluate(teacher_obs).detach()
         # self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         # self.transition.action_mean = self.actor_critic.action_mean.detach()
         # self.transition.action_sigma = self.actor_critic.action_std.detach()
         # need to record obs and critic_obs before env.step()
         self.transition.observations = obs
-        self.transition.critic_observations = critic_obs
         self.transition.teacher_observations = teacher_obs
         return self.transition.actions
 
     def process_env_step(self, rewards, dones, infos):
+        # self.transition.rewards = rewards.clone()
+        self.transition.dones = dones
+
         # Record the transition
         self.storage.add_transitions(self.transition)
         self.transition.clear()
         self.actor_critic.reset(dones)
 
     def update(self):
-        mse_loss = 0
         if self.actor_critic.is_recurrent:
             generator = self.storage.reccurent_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
         else:
@@ -87,24 +90,24 @@ class BC:
             hid_states_batch,
             masks_batch,
         ) in generator:
-            z_hat =self.actor_critic.get_latents(obs_batch)
-            z = self.teacher.get_latents(teacher_obs_batch)
+            self.actor_critic.act_inference(obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
+            z_hat =self.actor_critic.get_latent(obs_batch)
+            z = self.teacher.get_latent(teacher_obs_batch)
 
-            mean_squared_error = (z - z_hat).pow(2).mean()
-            loss = mean_squared_error
+            loss = self.loss_fn(z_hat, z)
 
             # Gradient step
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
 
-            mse_loss += mean_squared_error.item()
+            # mse_loss += mean_squared_error.item()
 
-        num_updates = self.num_learning_epochs * self.num_mini_batches
-        mse_loss /= num_updates
+        # num_updates = self.num_learning_epochs * self.num_mini_batches
+        # mse_loss /= num_updates
         self.storage.clear()
 
-        return mse_loss
+        return loss
 
     def act_inference(self, observations):
         obs_actor = observations[:, self.num_env_obs:]

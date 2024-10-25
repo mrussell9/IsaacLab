@@ -21,7 +21,7 @@ class RMA1(ActorCritic):
         prev_step_size,
         z_size,
         actor_hidden_dims=[128, 128],
-        encoder_hidden_dims=[256, 128, 8],
+        encoder_hidden_dims=[256, 128, 30],
         critic_hidden_dims=[256, 256, 256],
         activation="elu",
         init_noise_std=1.0,

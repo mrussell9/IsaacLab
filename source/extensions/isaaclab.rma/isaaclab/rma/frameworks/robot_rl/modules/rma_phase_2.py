@@ -16,7 +16,7 @@ class RMA2(ActorCritic):
         prev_step_size,
         z_size,
         actor_hidden_dims=[128, 128],
-        encoder_hidden_dims=[512, 32],
+        encoder_hidden_dims=[48, 48, 32],
         activation="elu",
         init_noise_std=1.0,
         **kwargs,
@@ -31,6 +31,8 @@ class RMA2(ActorCritic):
         activation = get_activation(activation)
         num_policy_obs = prev_step_size + z_size # HARDCODED
         self.num_env_obs = env_size
+        self.history_length = 50
+        self.all_env_obs = self.num_env_obs * self.history_length
         
         # Fix Hard Coding Later
         conv_layer_params=[[32, 32, 8, 4], [32, 32, 5, 1], [32, 32, 5, 1]]
@@ -58,15 +60,14 @@ class RMA2(ActorCritic):
                 encoder.append(nn.Linear(encoder_hidden_dims[layer_index], encoder_hidden_dims[layer_index + 1]))
                 encoder.append(activation)
         self.encoder = nn.Sequential(*encoder)
-        conv_net = []
-        for layer_param in conv_layer_params:
-            conv_net.append(nn.Conv1d(in_channels=layer_param[0], 
-                                      out_channels=layer_param[1], 
-                                      kernel_size=layer_param[2], 
-                                      stride=layer_param[3]))
-        self.conv_net = nn.Sequential(*conv_net)
-        self.linear_layer = nn.Linear(32, 8)
 
+        conv_net = []
+        for conv_layer in conv_layer_params:
+            conv_net.append(nn.Conv1d(in_channels=conv_layer[0], out_channels=conv_layer[1],
+                                     kernel_size=conv_layer[2], stride=conv_layer[3]))
+        conv_net.append(nn.Flatten(start_dim=1))
+        conv_net.append(nn.Linear(96, 8))
+        self.conv_net = nn.Sequential(*conv_net)
         # Action noise
         self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
         self.distribution = None
@@ -92,7 +93,11 @@ class RMA2(ActorCritic):
         raise NotImplementedError
 
     def update_distribution(self, observations):
-        obs_actor = observations[:, self.num_env_obs:]
+        ######### This is because Kyle wrote a dumb history buffer ############
+        obs = observations.view(observations.shape[0], self.num_env_obs, self.history_length)
+        obs = obs.transpose(2,1)
+        obs_actor = obs[:, 0, :]
+        #################### Need To Fix Later ################################
         z = self.get_latent(observations)
         actor_input = torch.cat([z, obs_actor], dim=-1)
         mean = self.actor(actor_input)
@@ -105,22 +110,29 @@ class RMA2(ActorCritic):
     def get_actions_log_prob(self, actions):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
-    def act_inference(self, observations):
-        obs_actor = observations[:, self.num_env_obs:]
+    def act_inference(self, observations, **kwargs):
+        ######### This is because Kyle wrote a dumb history buffer ############
+        obs = observations.view(observations.shape[0], self.num_env_obs, self.history_length)
+        obs = obs.transpose(2,1)
+        obs_actor = obs[:, 0, :]
+        #################### Need To Fix Later ################################
         z = self.get_latent(observations)
         actor_input = torch.cat([z, obs_actor], dim=-1)
         actions_mean = self.actor(actor_input)
         return actions_mean
 
-    def evaluate(self, critic_observations, **kwargs):
-        value = self.critic(critic_observations)
+    def evaluate(self, teacher_observations, **kwargs):
+        value = self.critic(teacher_observations)
         return value
     
     def get_latent(self, observations):
-        print(observations.shape)
-        x = (self.encoder(observations)).unsqueeze(dim=1)
+        ######### This is because Kyle wrote a dumb history buffer ############
+        obs = observations.view(observations.shape[0], self.num_env_obs, self.history_length)
+        obs = obs.transpose(2,1)
+        #################### Need To Fix Later ################################
+        x = (self.encoder(obs))
+        x = x.transpose(2,1)
         x = (self.conv_net(x))
-        x = self.linear_layer(x)
         return x
 
 def get_activation(act_name):

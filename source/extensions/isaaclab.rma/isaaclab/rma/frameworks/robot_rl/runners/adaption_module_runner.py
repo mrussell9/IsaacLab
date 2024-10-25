@@ -126,7 +126,7 @@ class AdaptionModuleRunner:
             # Rollout
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
-                    actions = self.alg.actor_critic.act_inference(obs)
+                    actions = self.alg.act(obs, teacher_obs)
                     obs, rewards, dones, infos = self.env.step(actions)
                     obs = self.obs_normalizer(obs)
                     if "critic" in infos["observations"]:
@@ -167,7 +167,7 @@ class AdaptionModuleRunner:
 
                 # Learning step
                 start = stop
-                self.alg.compute_returns(critic_obs) #MIGHT NOT NEED THIS
+                # self.alg.compute_returns(critic_obs) #MIGHT NOT NEED THIS
 
             mse_loss = self.alg.update()
             stop = time.time()
@@ -285,10 +285,7 @@ class AdaptionModuleRunner:
 
     def load_teacher(self, path):
         loaded_dict = torch.load(path)
-        print("LOADING TEACHER")
-        print(self.alg.teacher)
         self.alg.teacher.load_state_dict(loaded_dict["model_state_dict"])
-        print("STATE_DICT_APPLIED")
         if self.empirical_normalization:
             self.obs_normalizer.load_state_dict(loaded_dict["obs_norm_state_dict"])
             self.critic_obs_normalizer.load_state_dict(loaded_dict["critic_obs_norm_state_dict"])
