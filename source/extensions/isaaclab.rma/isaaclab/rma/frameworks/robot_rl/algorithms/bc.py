@@ -61,7 +61,7 @@ class BC:
             self.transition.hidden_states = self.actor_critic.get_hidden_states()
         # Compute the actions and values
         z_hat = self.actor_critic.get_latent(obs)
-        self.transition.actions = self.teacher.act_inference(z_hat, teacher_obs).detach()
+        self.transition.actions = self.teacher.act_inference(teacher_obs, z=z_hat).detach()
         # self.transition.values = self.actor_critic.evaluate(teacher_obs).detach()
         # self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         # self.transition.action_mean = self.actor_critic.action_mean.detach()
@@ -93,7 +93,7 @@ class BC:
         ) in generator:
             z_hat =self.actor_critic.get_latent(obs_batch)
             z = self.teacher.get_latent(teacher_obs_batch)
-            self.teacher.act_inference(z_hat, teacher_obs_batch)
+            self.teacher.act_inference(teacher_obs_batch, z=z_hat)
             # self.teacher.act_inference(z_hat, teacher_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
 
             loss = self.loss_fn(z_hat, z)

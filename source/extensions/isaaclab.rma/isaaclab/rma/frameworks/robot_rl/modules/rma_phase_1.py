@@ -115,9 +115,12 @@ class RMA1(ActorCritic):
     def get_actions_log_prob(self, actions):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
-    def act_inference(self, z, observations):
+    def act_inference(self, observations, **kwargs):
         obs_actor = observations[:, self.num_env_obs:]
-        # z = self.get_latent(observations)
+        if 'z' in kwargs.keys():
+            z = kwargs['z']
+        else:
+            z = self.get_latent(observations)
         actor_input = torch.cat([z, obs_actor], dim=-1)
         actions_mean = self.actor(actor_input)
         return actions_mean
