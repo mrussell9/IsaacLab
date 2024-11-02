@@ -47,12 +47,12 @@ class AdaptionModuleRunner:
         teacher: RMA1 = teacher_class(
             num_teacher_obs, num_critic_obs, self.env.num_actions, **self.teacher_cfg
         ).to(self.device)
-        actor_critic_class = eval(self.policy_cfg.pop("class_name"))
-        actor_critic: RMA2 = actor_critic_class(
-            num_obs, num_teacher_obs, self.env.num_actions, **self.policy_cfg
+        adaption_module_class = eval(self.policy_cfg.pop("class_name"))
+        adaption_module: RMA2 = adaption_module_class(
+            self.env.num_actions, **self.policy_cfg
         ).to(self.device)
         alg_class = eval(self.alg_cfg.pop("class_name"))  # BC
-        self.alg: BC = alg_class(actor_critic, teacher, device=self.device, **self.alg_cfg)
+        self.alg: BC = alg_class(adaption_module, teacher, device=self.device, **self.alg_cfg)
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
         self.empirical_normalization = self.cfg["empirical_normalization"]
@@ -214,7 +214,6 @@ class AdaptionModuleRunner:
                 else:
                     self.writer.add_scalar("Episode/" + key, value, locs["it"])
                     ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
-        mean_std = self.alg.actor_critic.std.mean()
         fps = int(self.num_steps_per_env * self.env.num_envs / (locs["collection_time"] + locs["learn_time"]))
 
         self.writer.add_scalar("Loss/mean_squared_error", locs["mse_loss"], locs["it"])
@@ -269,7 +268,7 @@ class AdaptionModuleRunner:
 
     def save(self, path, infos=None):
         saved_dict = {
-            "model_state_dict": self.alg.actor_critic.state_dict(),
+            "model_state_dict": self.alg.adaption_module.state_dict(),
             "optimizer_state_dict": self.alg.optimizer.state_dict(),
             "iter": self.current_learning_iteration,
             "infos": infos,
@@ -296,12 +295,12 @@ class AdaptionModuleRunner:
     
     def load_base_policy(self, path):
         loaded_dict = torch.load(path)
-        self.alg.actor_critic.actor.load_state_dict(loaded_dict["model_state_dict"]['actor'])
+        self.alg.adaption_module.actor.load_state_dict(loaded_dict["model_state_dict"]['actor'])
         return loaded_dict["infos"]
 
     def load(self, path, load_optimizer=True):
         loaded_dict = torch.load(path)
-        self.alg.actor_critic.load_state_dict(loaded_dict["model_state_dict"])
+        self.alg.adaption_module.load_state_dict(loaded_dict["model_state_dict"])
         if self.empirical_normalization:
             self.obs_normalizer.load_state_dict(loaded_dict["obs_norm_state_dict"])
             self.critic_obs_normalizer.load_state_dict(loaded_dict["critic_obs_norm_state_dict"])
@@ -313,23 +312,23 @@ class AdaptionModuleRunner:
     def get_inference_policy(self, device=None):
         self.eval_mode()  # switch to evaluation mode (dropout for example)
         if device is not None:
-            self.alg.actor_critic.to(device)
-        policy = self.alg.actor_critic.act_inference
+            self.alg.adaption_module.to(device)
+        policy = self.alg.adaption_module.act_inference
         if self.cfg["empirical_normalization"]:
             if device is not None:
                 self.obs_normalizer.to(device)
-            policy = lambda x: self.alg.actor_critic.act_inference(self.obs_normalizer(x))  # noqa: E731
+            policy = lambda x: self.alg.adaption_module.act_inference(self.obs_normalizer(x))  # noqa: E731
         return policy
 
     def train_mode(self):
-        self.alg.actor_critic.train()
+        self.alg.adaption_module.train()
         if self.empirical_normalization:
             self.obs_normalizer.train()
             self.critic_obs_normalizer.train()
             self.teacher_obs_normalizer.train()
 
     def eval_mode(self):
-        self.alg.actor_critic.eval()
+        self.alg.adaption_module.eval()
         if self.empirical_normalization:
             self.obs_normalizer.eval()
             self.critic_obs_normalizer.eval()

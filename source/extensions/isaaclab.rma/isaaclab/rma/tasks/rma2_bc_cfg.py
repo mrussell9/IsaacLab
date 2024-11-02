@@ -6,7 +6,7 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
     RslRlPpoAlgorithmCfg,
 )
 
-from isaaclab.rma.frameworks.robot_rl.utils import RmaActorCriticsCfg, BcRunnerCfg, BcAlgorithmCfg
+from isaaclab.rma.frameworks.robot_rl.utils import RmaActorCriticsCfg, RmaAdaptionModuleCfg, BcRunnerCfg, BcAlgorithmCfg
 
 
 @configclass
@@ -19,15 +19,15 @@ class SpotRoughBcRunnerCfg(BcRunnerCfg):
     store_code_state = False
     logger = "wandb"
     wandb_project = "Spot_RMA_Phase2"
-    policy = RmaActorCriticsCfg(
+    policy = RmaAdaptionModuleCfg(
         class_name="RMA2",
-        init_noise_std=1.0,
         env_size=48,
         prev_step_size=48,
         z_size=30,
-        actor_hidden_dims=[512, 256, 128],
         encoder_hidden_dims=[512, 256, 128, 32],
+        conv_params=[[32, 32, 8, 4], [32, 32, 5, 1], [32, 32, 5, 1]],
         activation="elu",
+        history_length=50,
     )
     algorithm = BcAlgorithmCfg(
         learning_rate=0.00005,

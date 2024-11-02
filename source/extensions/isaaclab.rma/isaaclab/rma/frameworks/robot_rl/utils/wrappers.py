@@ -20,6 +20,18 @@ class RmaActorCriticsCfg(RslRlPpoActorCriticCfg):
     z_size: int = MISSING
 
 @configclass
+class RmaAdaptionModuleCfg:
+    class_name="RMA2",
+    init_noise_std: int = MISSING
+    env_size: int =MISSING
+    prev_step_size: int = MISSING
+    z_size: int = MISSING
+    encoder_hidden_dims: [int] = MISSING
+    conv_params: [[int]] = MISSING
+    activation: str = MISSING
+    history_length: int = MISSING
+
+@configclass
 class BcAlgorithmCfg:
     class_name: str = "BC"
     learning_rate: float = MISSING

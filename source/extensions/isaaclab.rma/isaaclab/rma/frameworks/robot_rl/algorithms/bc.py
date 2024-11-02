@@ -12,12 +12,12 @@ from isaaclab.rma.frameworks.robot_rl.storage import BcRolloutStorage
 
 
 class BC:
-    actor_critic: RMA2
+    adaption_module: RMA2
     teacher: RMA1
 
     def __init__(
         self,
-        actor_critic,
+        adaption_module,
         teacher,
         gamma=0.998,
         learning_rate=0.00005,
@@ -30,13 +30,13 @@ class BC:
         self.learning_rate = learning_rate
 
         # PPO components
-        self.actor_critic = actor_critic
-        self.actor_critic.to(self.device)
+        self.adaption_module = adaption_module
+        self.adaption_module.to(self.device)
         self.teacher = teacher
         self.teacher.to(self.device)
         self.storage = None  # initialized later
         self.loss_fn = nn.MSELoss()
-        self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
+        self.optimizer = optim.Adam(self.adaption_module.parameters(), lr=learning_rate)
         self.transition = BcRolloutStorage.Transition()
 
         # BC parameters
@@ -49,52 +49,40 @@ class BC:
         )
 
     def test_mode(self):
-        self.actor_critic.test()
+        self.adaption_module.test()
         self.teacher.test()
 
     def train_mode(self):
-        self.actor_critic.train()
+        self.adaption_module.train()
         self.teacher.test()
 
     def act(self, obs, teacher_obs):
-        if self.actor_critic.is_recurrent:
-            self.transition.hidden_states = self.actor_critic.get_hidden_states()
         # Compute the actions and values
-        z_hat = self.actor_critic.get_latent(obs)
+        z_hat = self.adaption_module(obs)
         self.transition.actions = self.teacher.act_inference(teacher_obs, z=z_hat).detach()
-        # self.transition.values = self.actor_critic.evaluate(teacher_obs).detach()
-        # self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
-        # self.transition.action_mean = self.actor_critic.action_mean.detach()
-        # self.transition.action_sigma = self.actor_critic.action_std.detach()
-        # need to record obs and critic_obs before env.step()
         self.transition.observations = obs
         self.transition.teacher_observations = teacher_obs
         return self.transition.actions
 
     def process_env_step(self, rewards, dones, infos):
-        # self.transition.rewards = rewards.clone()
         self.transition.dones = dones
 
         # Record the transition
         self.storage.add_transitions(self.transition)
         self.transition.clear()
-        self.actor_critic.reset(dones)
+        self.adaption_module.reset(dones)
 
     def update(self):
-        if self.actor_critic.is_recurrent:
-            generator = self.storage.reccurent_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
-        else:
-            generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
+        generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
         for (
             obs_batch,
             teacher_obs_batch,
             hid_states_batch,
             masks_batch,
         ) in generator:
-            z_hat =self.actor_critic.get_latent(obs_batch)
+            z_hat =self.adaption_module(obs_batch)
             z = self.teacher.get_latent(teacher_obs_batch)
             self.teacher.act_inference(teacher_obs_batch, z=z_hat)
-            # self.teacher.act_inference(z_hat, teacher_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[0])
 
             loss = self.loss_fn(z_hat, z)
 

@@ -6,19 +6,17 @@ from torch.distributions import Normal
 from isaaclab.rma.frameworks.robot_rl.modules import ActorCritic
 
 
-class RMA2(ActorCritic):
+class RMA2(nn.Module):
     def __init__(
         self,
-        num_actor_obs,
-        num_critic_obs,
         num_actions,
         env_size,
         prev_step_size,
         z_size,
-        actor_hidden_dims=[128, 128],
         encoder_hidden_dims=[48, 48, 32],
+        conv_params=[[32, 32, 8, 4], [32, 32, 5, 1], [32, 32, 5, 1]],
         activation="elu",
-        init_noise_std=1.0,
+        history_length=50,
         **kwargs,
     ):
         if kwargs:
@@ -31,23 +29,10 @@ class RMA2(ActorCritic):
         activation = get_activation(activation)
         num_policy_obs = prev_step_size + z_size # HARDCODED
         self.num_env_obs = env_size
-        self.history_length = 50
+        self.history_length = history_length
         self.all_env_obs = self.num_env_obs * self.history_length
         
         # Fix Hard Coding Later
-        conv_layer_params=[[32, 32, 8, 4], [32, 32, 5, 1], [32, 32, 5, 1]]
-
-        # Actor
-        actor_layers = []
-        actor_layers.append(nn.Linear(num_policy_obs, actor_hidden_dims[0]))
-        actor_layers.append(activation)
-        for layer_index in range(len(actor_hidden_dims)):
-            if layer_index == len(actor_hidden_dims) - 1:
-                actor_layers.append(nn.Linear(actor_hidden_dims[layer_index], num_actions))
-            else:
-                actor_layers.append(nn.Linear(actor_hidden_dims[layer_index], actor_hidden_dims[layer_index + 1]))
-                actor_layers.append(activation)
-        self.actor = nn.Sequential(*actor_layers)
         
         # Phase2 Prev States and Actions Encoder
         encoder = []
@@ -62,21 +47,14 @@ class RMA2(ActorCritic):
         self.encoder = nn.Sequential(*encoder)
 
         conv_net = []
-        for conv_layer in conv_layer_params:
+        for conv_layer in conv_params:
             conv_net.append(nn.Conv1d(in_channels=conv_layer[0], out_channels=conv_layer[1],
                                      kernel_size=conv_layer[2], stride=conv_layer[3], groups=32))
         conv_net.append(nn.Flatten(start_dim=1))
         conv_net.append(nn.Linear(96, z_size))
         self.conv_net = nn.Sequential(*conv_net)
-        # Action noise
-        self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
-        self.distribution = None
         # disable args validation for speedup
         Normal.set_default_validate_args = False
-
-        # seems that we get better performance without init
-        # self.init_memory_weights(self.memory_a, 0.001, 0.)
-        # self.init_memory_weights(self.memory_c, 0.001, 0.)
 
     @staticmethod
     # not used at the moment
@@ -89,41 +67,7 @@ class RMA2(ActorCritic):
     def reset(self, dones=None):
         pass
 
-    def forward(self):
-        raise NotImplementedError
-
-    def update_distribution(self, observations):
-        ######### Need to transform single list of obs into matrix ############
-        obs = observations.view(observations.shape[0], self.num_env_obs, self.history_length)
-        obs = obs.transpose(2,1)
-        obs_actor = obs[:, 0, :]
-        z = self.get_latent(observations)
-        actor_input = torch.cat([z, obs_actor], dim=-1)
-        mean = self.actor(actor_input)
-        self.distribution = Normal(mean, mean * 0.0 + self.std)
-
-    def act(self, observations, **kwargs):
-        self.update_distribution(observations)
-        return self.distribution.sample()
-
-    def get_actions_log_prob(self, actions):
-        return self.distribution.log_prob(actions).sum(dim=-1)
-
-    def act_inference(self, z, **kwargs):
-        # ######### Need to transform single list of obs into matrix ############
-        # obs = observations.view(observations.shape[0], self.num_env_obs, self.history_length)
-        # obs = obs.transpose(2,1)
-        # obs_actor = obs[:, 0, :]
-        # z = self.get_latent(observations)
-        actor_input = torch.cat([z, obs_actor], dim=-1)
-        actions_mean = self.actor(actor_input)
-        return actions_mean
-
-    def evaluate(self, teacher_observations, **kwargs):
-        value = self.critic(teacher_observations)
-        return value
-    
-    def get_latent(self, observations):
+    def forward(self, observations):
         ######### Need to transform single list of obs into matrix ############
         obs = observations.view(observations.shape[0], self.num_env_obs, self.history_length)
         obs = obs.transpose(2,1)
