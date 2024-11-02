@@ -49,7 +49,7 @@ def parse_rma_cfg(task_name: str, args_cli: argparse.Namespace) -> RslRlOnPolicy
     from omni.isaac.lab_tasks.utils.parse_cfg import load_cfg_from_registry
 
     # load the default configuration
-    rslrl_cfg: RslRlOnPolicyRunnerCfg = load_cfg_from_registry(task_name, "rsl_rl_cfg_entry_point")
+    rslrl_cfg: RslRlOnPolicyRunnerCfg = load_cfg_from_registry(task_name, "rma_cfg_entry_point")
     rslrl_cfg = update_rma_cfg(rslrl_cfg, args_cli)
     return rslrl_cfg
 

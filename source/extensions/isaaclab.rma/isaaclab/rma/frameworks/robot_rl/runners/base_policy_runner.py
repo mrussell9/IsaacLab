@@ -297,6 +297,17 @@ class BasePolicyRunner:
             policy = lambda x: self.alg.actor_critic.act_inference(self.obs_normalizer(x))  # noqa: E731
         return policy
 
+    def get_latents_policy(self, device=None):
+        self.eval_mode()
+        if device is not None:
+            self.alg.actor_critic.to(device)
+        latents = self.alg.actor_critic.get_latent
+        if self.cfg["empirical_normalization"]:
+            if device is not None:
+                self.obs_normalizer.to(device)
+            latents = lambda x: self.alg.actor_critic.get_latent(self.obs_normalizer(x))  # noqa: E731
+        return latents
+        
     def train_mode(self):
         self.alg.actor_critic.train()
         if self.empirical_normalization:

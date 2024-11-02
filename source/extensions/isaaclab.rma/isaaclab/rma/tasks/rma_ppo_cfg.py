@@ -24,9 +24,9 @@ class SpotFlatPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         init_noise_std=1.0,
         env_size=201,
         prev_step_size=48,
-        z_size=8,
+        z_size=128,
         actor_hidden_dims=[512, 256, 128],
-        encoder_hidden_dims=[256, 128, 8],
+        encoder_hidden_dims=[256, 128, 128],
         critic_hidden_dims=[512, 256, 128],
         activation="elu",
     )

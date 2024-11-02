@@ -29,67 +29,6 @@ import isaaclab.rma.mdp as rma_mdp
 ##
 from omni.isaac.lab_assets.spot import SPOT_CFG  # isort: skip
 
-# COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
-#     size=(8.0, 8.0), #subterrain size
-#     border_width=20.0,
-#     num_rows=9,
-#     num_cols=21,
-#     horizontal_scale=0.1,
-#     vertical_scale=0.005,
-#     slope_threshold=0.75,
-#     difficulty_range=(0.0, 1.0),
-#     use_cache=False,
-#     sub_terrains={
-#         "flat": terrain_gen.MeshPlaneTerrainCfg(proportion=0.2),
-#         "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
-#             proportion=0.2, noise_range=(0.02, 0.05), noise_step=0.02, border_width=0.25
-#         ),
-#     },
-# )
-
-COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
-    size=(8.0, 8.0), #subterrain size
-    border_width=20.0,
-    num_rows=10,
-    num_cols=20,
-    horizontal_scale=0.1,
-    vertical_scale=0.005,
-    slope_threshold=0.75,
-    difficulty_range=(0.0, 1.0),
-    use_cache=False,
-    sub_terrains={
-        "flat": terrain_gen.MeshPlaneTerrainCfg(proportion=0.2),
-        "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
-            proportion=0.2,
-            step_height_range=(0.05, 0.23),
-            step_width=0.3,
-            platform_width=3.0,
-            border_width=1.0,
-            holes=False,
-        ),
-        "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
-            proportion=0.2,
-            step_height_range=(0.05, 0.23),
-            step_width=0.3,
-            platform_width=3.0,
-            border_width=1.0,
-            holes=False,
-        ),
-        "boxes": terrain_gen.MeshRandomGridTerrainCfg(
-            proportion=0.2, grid_width=0.45, grid_height_range=(0.05, 0.2), platform_width=2.0
-        ),
-        "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
-            proportion=0.2, noise_range=(0.02, 0.10), noise_step=0.02, border_width=0.25
-        ),
-        "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
-            proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
-        ),
-        "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(
-            proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
-        ),
-    },
-)
-
 
 ##
 # Scene definition
@@ -104,8 +43,8 @@ class MySceneCfg(InteractiveSceneCfg):
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",  # could also be "plane"
-        terrain_generator=COBBLESTONE_ROAD_CFG,  # or none
-        max_init_terrain_level=COBBLESTONE_ROAD_CFG.num_rows - 1,
+        terrain_generator=rma_mdp.KINDA_HARD_CFG,  # or none
+        max_init_terrain_level=rma_mdp.KINDA_HARD_CFG.num_rows - 1,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -443,6 +382,7 @@ class SpotRmaCfg(ManagerBasedRLEnvCfg):
 
     # Viewer
     viewer = ViewerCfg(eye=(7.5, 7.5, 1.5), origin_type="agent_root", env_index=2048, asset_name="robot")
+    # viewer = ViewerCfg(eye=(2.5, 1.5, 1.5), origin_type="asset_root", env_index=0, asset_name="robot")
 
     def __post_init__(self):
         """Post initialization."""
@@ -472,6 +412,7 @@ class SpotRmaCfg(ManagerBasedRLEnvCfg):
 
 
 class SpotRmaCfg_PLAY(SpotRmaCfg):
+
     def __post_init__(self) -> None:
         # post init of parent
         super().__post_init__()
@@ -480,14 +421,18 @@ class SpotRmaCfg_PLAY(SpotRmaCfg):
         self.scene.num_envs = 1
         self.scene.env_spacing = 2.5
         # spawn the robot randomly in the grid (instead of their terrain levels)
-        self.scene.terrain.max_init_terrain_level = None
-
+        self.scene.terrain.terrain_generator=rma_mdp.FLAT_ROAD_CFG  # or none
+        self.scene.terrain.max_init_terrain_level=1
         # reduce the number of terrains to save memory
-        if self.scene.terrain.terrain_generator is not None:
-            self.scene.terrain.terrain_generator.num_rows = 5
-            self.scene.terrain.terrain_generator.num_cols = 5
-            self.scene.terrain.terrain_generator.curriculum = False
+        # if self.scene.terrain.terrain_generator is not None:
+        #     self.scene.terrain.terrain_generator.num_rows = 5
+        #     self.scene.terrain.terrain_generator.num_cols = 5
+        # self.scene.terrain.terrain_generator.curriculum = False
 
+        self.commands.base_velocity.ranges = mdp.UniformVelocityCommandCfg.Ranges(lin_vel_x=(1.5, 1.5), 
+                                                                                  lin_vel_y=(0, 0),
+                                                                                  ang_vel_z=(0, 0))
+        self.commands.base_velocity.rel_standing_envs = 0
         # disable randomization for play
         self.observations.policy.enable_corruption = False
         # remove random pushing event

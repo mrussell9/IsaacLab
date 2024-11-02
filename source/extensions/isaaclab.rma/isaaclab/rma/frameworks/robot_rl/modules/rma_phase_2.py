@@ -64,9 +64,9 @@ class RMA2(ActorCritic):
         conv_net = []
         for conv_layer in conv_layer_params:
             conv_net.append(nn.Conv1d(in_channels=conv_layer[0], out_channels=conv_layer[1],
-                                     kernel_size=conv_layer[2], stride=conv_layer[3]))
+                                     kernel_size=conv_layer[2], stride=conv_layer[3], groups=32))
         conv_net.append(nn.Flatten(start_dim=1))
-        conv_net.append(nn.Linear(96, 8))
+        conv_net.append(nn.Linear(96, z_size))
         self.conv_net = nn.Sequential(*conv_net)
         # Action noise
         self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
@@ -93,11 +93,10 @@ class RMA2(ActorCritic):
         raise NotImplementedError
 
     def update_distribution(self, observations):
-        ######### This is because Kyle wrote a dumb history buffer ############
+        ######### Need to transform single list of obs into matrix ############
         obs = observations.view(observations.shape[0], self.num_env_obs, self.history_length)
         obs = obs.transpose(2,1)
         obs_actor = obs[:, 0, :]
-        #################### Need To Fix Later ################################
         z = self.get_latent(observations)
         actor_input = torch.cat([z, obs_actor], dim=-1)
         mean = self.actor(actor_input)
@@ -110,13 +109,12 @@ class RMA2(ActorCritic):
     def get_actions_log_prob(self, actions):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
-    def act_inference(self, observations, **kwargs):
-        ######### This is because Kyle wrote a dumb history buffer ############
-        obs = observations.view(observations.shape[0], self.num_env_obs, self.history_length)
-        obs = obs.transpose(2,1)
-        obs_actor = obs[:, 0, :]
-        #################### Need To Fix Later ################################
-        z = self.get_latent(observations)
+    def act_inference(self, z, **kwargs):
+        # ######### Need to transform single list of obs into matrix ############
+        # obs = observations.view(observations.shape[0], self.num_env_obs, self.history_length)
+        # obs = obs.transpose(2,1)
+        # obs_actor = obs[:, 0, :]
+        # z = self.get_latent(observations)
         actor_input = torch.cat([z, obs_actor], dim=-1)
         actions_mean = self.actor(actor_input)
         return actions_mean
@@ -126,10 +124,9 @@ class RMA2(ActorCritic):
         return value
     
     def get_latent(self, observations):
-        ######### This is because Kyle wrote a dumb history buffer ############
+        ######### Need to transform single list of obs into matrix ############
         obs = observations.view(observations.shape[0], self.num_env_obs, self.history_length)
         obs = obs.transpose(2,1)
-        #################### Need To Fix Later ################################
         x = (self.encoder(obs))
         x = x.transpose(2,1)
         x = (self.conv_net(x))
