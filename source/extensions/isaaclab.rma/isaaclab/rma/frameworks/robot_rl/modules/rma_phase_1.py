@@ -74,6 +74,8 @@ class RMA1(ActorCritic):
                 critic_layers.append(activation)
         self.critic = nn.Sequential(*critic_layers)
 
+        print("RMA Phase 1")
+        print(f"Encoder MLP: {self.encoder}")
         print(f"Actor MLP: {self.actor}")
         print(f"Critic MLP: {self.critic}")
 

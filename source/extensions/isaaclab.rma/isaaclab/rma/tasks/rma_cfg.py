@@ -43,8 +43,8 @@ class MySceneCfg(InteractiveSceneCfg):
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",  # could also be "plane"
-        terrain_generator=rma_mdp.KINDA_HARD_CFG,  # or none
-        max_init_terrain_level=rma_mdp.KINDA_HARD_CFG.num_rows - 1,
+        terrain_generator=rma_mdp.REALLY_HARD_CFG,  # or none
+        max_init_terrain_level=rma_mdp.REALLY_HARD_CFG.num_rows - 1,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -381,7 +381,7 @@ class SpotRmaCfg(ManagerBasedRLEnvCfg):
     curriculum: CurriculumCfg = CurriculumCfg()
 
     # Viewer
-    viewer = ViewerCfg(eye=(7.5, 7.5, 1.5), origin_type="agent_root", env_index=2048, asset_name="robot")
+    viewer = ViewerCfg(eye=(7.5, 7.5, 1.5), origin_type="asset_root", env_index=2048, asset_name="robot")
     # viewer = ViewerCfg(eye=(2.5, 1.5, 1.5), origin_type="asset_root", env_index=0, asset_name="robot")
 
     def __post_init__(self):

@@ -38,6 +38,9 @@ class BasePolicyRunner:
         else:
             num_critic_obs = num_obs
         actor_critic_class = eval(self.policy_cfg.pop("class_name"))  # ActorCritic
+        print(f"NUM OBS: {num_obs}")
+        print(f"NUM CRITIC OBS: {num_critic_obs}")
+        print(f"NUM ACTIONS: {self.env.num_actions}")
         actor_critic: RMA1 = actor_critic_class(
             num_obs, num_critic_obs, self.env.num_actions, **self.policy_cfg
         ).to(self.device)

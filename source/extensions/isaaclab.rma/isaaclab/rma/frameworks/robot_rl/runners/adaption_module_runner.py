@@ -292,11 +292,6 @@ class AdaptionModuleRunner:
             # self.alg.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
         self.current_learning_iteration = loaded_dict["iter"]
         return loaded_dict["infos"]
-    
-    def load_base_policy(self, path):
-        loaded_dict = torch.load(path)
-        self.alg.adaption_module.actor.load_state_dict(loaded_dict["model_state_dict"]['actor'])
-        return loaded_dict["infos"]
 
     def load(self, path, load_optimizer=True):
         loaded_dict = torch.load(path)

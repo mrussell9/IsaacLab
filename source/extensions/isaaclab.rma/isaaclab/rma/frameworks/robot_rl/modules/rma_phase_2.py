@@ -24,7 +24,7 @@ class RMA2(nn.Module):
                 "RMA2.__init__ got unexpected arguments, which will be ignored: "
                 + str([key for key in kwargs.keys()])
             )
-        torch.nn.Module.__init__(self)
+        super().__init__()
         # Spot_RMA/runs/ll3q83hn/
         activation = get_activation(activation)
         num_policy_obs = prev_step_size + z_size # HARDCODED
@@ -55,6 +55,10 @@ class RMA2(nn.Module):
         self.conv_net = nn.Sequential(*conv_net)
         # disable args validation for speedup
         Normal.set_default_validate_args = False
+
+        print("RMA Phase 2")
+        print(f"Encoder MLP: {self.encoder}")
+        print(f"Encoder Conv: {self.conv_net}")
 
     @staticmethod
     # not used at the moment

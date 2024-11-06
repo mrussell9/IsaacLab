@@ -112,7 +112,7 @@ def pull_policy_from_wandb(save_dir: str, run_path: str, model_name: str) -> tup
     env_cfg = wandb_run.config["env_cfg"]
     return resume_path, env_cfg
 
-def load_wandb_policy(run_path: str, model_name: str, log_root_path: str, log_dir: str) -> tuple[str, dict]:
+def load_wandb_policy(run_path: str = "", model_name: str = "", log_root_path: str = "", log_dir: str = "") -> tuple[str, dict]:
     if run_path == "":
         run_path = input(
             "\033[96mEnter the Weights and Biases run path located on the Overview panel; i.e"
