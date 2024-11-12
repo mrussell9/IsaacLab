@@ -45,89 +45,6 @@ import cli_args
 from isaaclab.rma.frameworks.robot_rl.modules import RMA1, RMA2
 from isaaclab.rma.frameworks.robot_rl.utils import export_RMA_policy_as_onnx
 
-class InferencePolicy(nn.Module):
-    def __init__(self, 
-                num_env_obs = 48, 
-                num_policy_obs=78, 
-                z_size = 30,
-                policy_hidden_dims=[512, 256, 128], 
-                encoder_hidden_dims=[512, 256, 128, 32],
-                conv_params=[[32, 32, 8, 4], [32, 32, 5, 1], [32, 32, 5, 1]], 
-                activation='elu', 
-                num_actions=12
-                ):
-        super().__init__()
-
-        activation = get_activation(activation)
-
-        policy_layers = []
-        # policy
-        policy_layers.append(nn.Linear(num_policy_obs, policy_hidden_dims[0]))
-        policy_layers.append(activation)
-        for layer_index in range(len(policy_hidden_dims)):
-            if layer_index == len(policy_hidden_dims) - 1:
-                policy_layers.append(nn.Linear(policy_hidden_dims[layer_index], num_actions))
-            else:
-                policy_layers.append(nn.Linear(policy_hidden_dims[layer_index], policy_hidden_dims[layer_index + 1]))
-                policy_layers.append(activation)
-        self.actor = nn.Sequential(*policy_layers)
-
-        encoder = []
-        encoder.append(nn.Linear(num_env_obs, encoder_hidden_dims[0]))
-        encoder.append(activation)
-        for layer_index in range(len(encoder_hidden_dims)):
-            if layer_index == len(encoder_hidden_dims) - 1:
-                encoder.append(nn.Linear(encoder_hidden_dims[layer_index], encoder_hidden_dims[-1]))
-            else:
-                encoder.append(nn.Linear(encoder_hidden_dims[layer_index], encoder_hidden_dims[layer_index + 1]))
-                encoder.append(activation)
-        self.encoder = nn.Sequential(*encoder)
-
-        conv_net = []
-        for conv_layer in conv_params:
-            conv_net.append(nn.Conv1d(in_channels=conv_layer[0], out_channels=conv_layer[1],
-                                     kernel_size=conv_layer[2], stride=conv_layer[3], groups=32))
-        conv_net.append(nn.Flatten(start_dim=1))
-        conv_net.append(nn.Linear(96, z_size))
-        self.conv_net = nn.Sequential(*conv_net)
-
-    def forward(self, obs):
-        x = self.mlp(obs)
-        x = x.transpose(2,1)
-        x = self.conv_net(x)
-        x = self.actor(x)
-        return x
-
-# def save_model_as_onxx(model, model_path):
-#     model_file_dir = os.path.dirname(model_path)
-#     model_file_name = os.path.splitext(os.path.basename(model_path))[0]
-#     print(f"[INFO]: Loading model checkpoint from: {model_path}")
-
-#     export_model_dir = os.path.join(model_file_dir, f"{model_file_name}_deployment")
-#     os.makedirs(export_model_dir, exist_ok=True)
-
-#     print(f"[INFO]: Saving policy onnx file to {export_model_dir}")
-#     export_policy_as_onnx(model, export_model_dir, filename=f"{model_file_name}.onnx")
-
-def get_activation(act_name):
-    if act_name == "elu":
-        return nn.ELU()
-    elif act_name == "selu":
-        return nn.SELU()
-    elif act_name == "relu":
-        return nn.ReLU()
-    elif act_name == "crelu":
-        return nn.CReLU()
-    elif act_name == "lrelu":
-        return nn.LeakyReLU()
-    elif act_name == "tanh":
-        return nn.Tanh()
-    elif act_name == "sigmoid":
-        return nn.Sigmoid()
-    else:
-        print("invalid activation function!")
-        return None
-
 def main(base_model, adaption_module):
     run_path = ""
 
@@ -151,12 +68,7 @@ def main(base_model, adaption_module):
     base_model.load_state_dict(base_model_dict['model_state_dict'])
     adaption_module.load_state_dict(adaption_module_dict['model_state_dict'])
 
-    policy = InferencePolicy()
-    policy.encoder = adaption_module.encoder
-    policy.conv_net = adaption_module.conv_net
-    policy.actor = base_model.actor
-
-    export_RMA_policy_as_onnx(policy, log_root_path)
+    export_RMA_policy_as_onnx(base_model, adaption_module, log_root_path)
 
 if __name__ == '__main__':
     base_model = RMA1(num_actor_obs=249,

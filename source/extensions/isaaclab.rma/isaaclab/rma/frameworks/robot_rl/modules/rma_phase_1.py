@@ -118,10 +118,12 @@ class RMA1(ActorCritic):
         return self.distribution.log_prob(actions).sum(dim=-1)
 
     def act_inference(self, observations, **kwargs):
-        obs_actor = observations[:, self.num_env_obs:]
+        # Supporting Phase 1 and Phase 2 inference
         if 'z' in kwargs.keys():
+            obs_actor = observations
             z = kwargs['z']
         else:
+            obs_actor = observations[:,self.num_env_obs,:]
             z = self.get_latent(observations)
         actor_input = torch.cat([z, obs_actor], dim=-1)
         actions_mean = self.actor(actor_input)

@@ -267,18 +267,18 @@ class RewardsCfg:
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"),
         },
     )
-    # gait = RewardTermCfg(
-    #     func=spot_mdp.GaitReward,
-    #     weight=10.0,
-    #     params={
-    #         "std": 0.1,
-    #         "max_err": 0.2,
-    #         "velocity_threshold": 0.5,
-    #         "synced_feet_pair_names": (("fl_foot", "hr_foot"), ("fr_foot", "hl_foot")),
-    #         "asset_cfg": SceneEntityCfg("robot"),
-    #         "sensor_cfg": SceneEntityCfg("contact_forces"),
-    #     },
-    # )
+    gait = RewardTermCfg(
+        func=spot_mdp.GaitReward,
+        weight=10.0,
+        params={
+            "std": 0.1,
+            "max_err": 0.2,
+            "velocity_threshold": 0.5,
+            "synced_feet_pair_names": (("fl_foot", "hr_foot"), ("fr_foot", "hl_foot")),
+            "asset_cfg": SceneEntityCfg("robot"),
+            "sensor_cfg": SceneEntityCfg("contact_forces"),
+        },
+    )
 
     # -- penalties
     action_smoothness = RewardTermCfg(func=spot_mdp.action_smoothness_penalty, weight=-1.0)
@@ -381,7 +381,7 @@ class SpotRmaCfg(ManagerBasedRLEnvCfg):
     curriculum: CurriculumCfg = CurriculumCfg()
 
     # Viewer
-    viewer = ViewerCfg(eye=(7.5, 7.5, 1.5), origin_type="asset_root", env_index=2048, asset_name="robot")
+    viewer = ViewerCfg(eye=(12.5, 12.5, 7.5), origin_type="env", env_index=4095, asset_name="robot")
     # viewer = ViewerCfg(eye=(2.5, 1.5, 1.5), origin_type="asset_root", env_index=0, asset_name="robot")
 
     def __post_init__(self):
