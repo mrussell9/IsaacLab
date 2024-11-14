@@ -61,78 +61,28 @@ class BC:
         ##########################################################
         # This is ugly and should be fixed but for now... it works...
         # Position of most recent observations for each term
+        history = 50
         obs_dict = {
-            "lin_vel": [0,3],
-            "ang_vel": [150,153],
-            "proj_g": [300,303],
-            "vel_com": [450,453],
-            "joint_pos": [600,612],
-            "joint_vel": [1200,1212],
-            "actions": [1800, 1812]
+            "lin_vel": 3,
+            "ang_vel": 3,
+            "proj_g": 3,
+            "vel_com": 3,
+            "joint_pos": 12,
+            "joint_vel": 12,
+            "actions": 12
         }
-        # Most recent observations
-        obs_actor = torch.cat(
-            [obs[:, obs_dict['lin_vel'][0]:obs_dict['lin_vel'][1]],
-            obs[:, obs_dict['ang_vel'][0]:obs_dict['ang_vel'][1]],
-            obs[:, obs_dict['proj_g'][0]:obs_dict['proj_g'][1]],
-            obs[:, obs_dict['vel_com'][0]:obs_dict['vel_com'][1]],
-            obs[:, obs_dict['joint_pos'][0]:obs_dict['joint_pos'][1]],
-            obs[:, obs_dict['joint_vel'][0]:obs_dict['joint_vel'][1]],
-            obs[:, obs_dict['actions'][0]:obs_dict['actions'][1]]],
-            dim=-1
-        )
-        # Obs are currently stored as [x,y,z,x,y,z... * history] for each term,
-        # For our conv net we want them to be [x,x,x * history, y,y,y * history, z,z,z * history, etc]
-        obs_ordered = torch.cat(
-            [obs[:,0:150:3],
-            obs[:,1:150:3],
-            obs[:,2:150:3],
-            obs[:,150:300:3],
-            obs[:,151:300:3],
-            obs[:,152:300:3],
-            obs[:,300:450:3],
-            obs[:,301:450:3],
-            obs[:,302:450:3],
-            obs[:,450:600:3],
-            obs[:,451:600:3],
-            obs[:,452:600:3],
-            obs[:,600:1200:12],
-            obs[:,601:1200:12],
-            obs[:,602:1200:12],
-            obs[:,603:1200:12],
-            obs[:,604:1200:12],
-            obs[:,605:1200:12],
-            obs[:,606:1200:12],
-            obs[:,607:1200:12],
-            obs[:,608:1200:12],
-            obs[:,609:1200:12],
-            obs[:,610:1200:12],
-            obs[:,611:1200:12],
-            obs[:,1200:1800:12],
-            obs[:,1201:1800:12],
-            obs[:,1202:1800:12],
-            obs[:,1203:1800:12],
-            obs[:,1204:1800:12],
-            obs[:,1205:1800:12],
-            obs[:,1206:1800:12],
-            obs[:,1207:1800:12],
-            obs[:,1208:1800:12],
-            obs[:,1209:1800:12],
-            obs[:,1210:1800:12],
-            obs[:,1211:1800:12],
-            obs[:,1800:2400:12],
-            obs[:,1801:2400:12],
-            obs[:,1802:2400:12],
-            obs[:,1803:2400:12],
-            obs[:,1804:2400:12],
-            obs[:,1805:2400:12],
-            obs[:,1806:2400:12],
-            obs[:,1807:2400:12],
-            obs[:,1808:2400:12],
-            obs[:,1809:2400:12],
-            obs[:,1810:2400:12],
-            obs[:,1811:2400:12]], dim=-1
-        )
+
+        index = 0
+        obs_ordered = torch.empty((obs.shape[0], 0), dtype=torch.float32).to(self.device)
+        obs_actor = torch.empty((obs.shape[0], 0), dtype=torch.float32).to(self.device)
+        for v in obs_dict.values():
+            for i in range(v):
+                obs_slice = obs[:, index+i:index+v*history:v]
+                obs_ordered = torch.cat([obs_ordered, obs_slice], dim=-1)
+                a = obs[:, index+i].unsqueeze(dim=1)
+                obs_actor = torch.cat([obs_actor, a], dim=-1)
+            index += v*history
+
         ##########################################################
         z_hat = self.adaption_module(obs_ordered)
         self.transition.actions = self.teacher.act_inference(obs_actor, z=z_hat).detach()

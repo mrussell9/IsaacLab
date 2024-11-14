@@ -357,7 +357,11 @@ class CurriculumCfg:
     """Curriculum terms for the MDP."""
 
     terrain_levels = CurrTerm(func=rma_mdp.terrain_levels_vel)
-    
+
+    gait = CurrTerm(
+        func=rma_mdp.modify_reward_weight_by_terrain, params={"term_name": "gait", "weight": 10}
+    )
+
 
 ##
 # Environment configuration
@@ -381,7 +385,7 @@ class SpotRmaCfg(ManagerBasedRLEnvCfg):
     curriculum: CurriculumCfg = CurriculumCfg()
 
     # Viewer
-    viewer = ViewerCfg(eye=(12.5, 12.5, 7.5), origin_type="env", env_index=4095, asset_name="robot")
+    viewer = ViewerCfg(eye=(12.5, 12.5, 7.5), origin_type="env", env_index=2046, asset_name="robot")
     # viewer = ViewerCfg(eye=(2.5, 1.5, 1.5), origin_type="asset_root", env_index=0, asset_name="robot")
 
     def __post_init__(self):

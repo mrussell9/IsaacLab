@@ -48,3 +48,23 @@ def terrain_levels_vel(
     terrain.update_env_origins(env_ids, move_up, move_down)
     # return the mean terrain level
     return torch.mean(terrain.terrain_levels.float())
+
+def modify_reward_weight_by_terrain(env: ManagerBasedRLEnv, env_ids: Sequence[int], term_name: str, weight: float):
+    """Curriculum that modifies a reward weight by terrain level.
+
+    Args:
+        env: The learning environment.
+        env_ids: Not used since all environments are affected.
+        term_name: The name of the reward term.
+        weight: The weight of the reward term.
+    """
+    terrain: TerrainImporter = env.scene.terrain
+    terrain_level = torch.mean(terrain.terrain_levels.float())
+
+    # obtain term settings
+    term_cfg = env.reward_manager.get_term_cfg(term_name)
+    # update term settings
+    
+    # Modify reward weight by terrain level
+    term_cfg.weight = weight/(terrain_level.clamp(min=1)**2)
+    env.reward_manager.set_term_cfg(term_name, term_cfg)
