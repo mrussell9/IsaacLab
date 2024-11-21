@@ -108,7 +108,6 @@ class BC:
         ) in generator:
             z_hat =self.adaption_module(obs_batch)
             z = self.teacher.get_latent(teacher_obs_batch)
-            # self.teacher.act_inference(obs_batch, z=z_hat)
 
             loss = self.loss_fn(z_hat, z)
 

@@ -33,6 +33,7 @@ class AdaptionModuleRunner:
         self.teacher_cfg = train_cfg["teacher"]
         self.device = device
         self.env = env
+        self.mse_loss = 1.0
         obs, extras = self.env.get_observations()
         num_obs = obs.shape[1]
         if "teacher" in extras["observations"]:
@@ -177,6 +178,9 @@ class AdaptionModuleRunner:
                 self.log(locals())
             if it % self.save_interval == 0:
                 self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
+            if mse_loss < self.mse_loss:
+                self.save(os.path.join(self.log_dir, f"model_best.pt"))
+                self.mse_loss = mse_loss
             ep_infos.clear()
             if it == start_iter:
                 # obtain all the diff files

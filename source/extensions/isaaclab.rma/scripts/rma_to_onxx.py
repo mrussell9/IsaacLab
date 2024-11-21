@@ -55,11 +55,11 @@ def main(base_model, adaption_module):
     log_dir = os.path.join(log_root_path, log_dir)
 
     print(f"[INFO]: LOADING BASE POLICY FROM WANDB")
-    base_model_path, base_policy_env_cfg = cli_args.load_wandb_policy(run_path = "Spot_RMA/runs/jdnmetb6", model_name = "49999", 
+    base_model_path, base_policy_env_cfg = cli_args.load_wandb_policy(run_path = "Spot_RMA/runs/ymx0bwp6", model_name = "99998", 
                                                                     log_root_path = log_root_path + "/base_policies", log_dir = log_dir)
 
     print(f"[INFO]: LOADING ADAPTION MODULE FROM WANDB")
-    adaption_module_path, adaption_module_env_cfg = cli_args.load_wandb_policy(run_path = "Spot_RMA_Phase2/runs/n6qcnflh", model_name = "79998", 
+    adaption_module_path, adaption_module_env_cfg = cli_args.load_wandb_policy(run_path = "Spot_RMA_Phase2/runs/q0xgzd6i", model_name = "69998", 
                                                                             log_root_path = log_root_path + "/adaption_modules", log_dir = log_dir)
 
     base_model_dict = torch.load(base_model_path)

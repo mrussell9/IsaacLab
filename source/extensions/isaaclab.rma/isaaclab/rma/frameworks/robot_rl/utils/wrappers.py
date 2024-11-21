@@ -89,28 +89,31 @@ class _RMAOnnxPolicyExporter(torch.nn.Module):
         self.actor = copy.deepcopy(base_policy.actor)
 
     def forward(self, obs) -> torch.Tensor:
+        history = 50
         obs_dict = {
-            "lin_vel": [0,3],
-            "ang_vel": [150,153],
-            "proj_g": [300,303],
-            "vel_com": [450,453],
-            "joint_pos": [600,612],
-            "joint_vel": [1200,1212],
-            "actions": [1800, 1812]
+            "lin_vel": 3,
+            "ang_vel": 3,
+            "proj_g": 3,
+            "vel_com": 3,
+            "joint_pos": 12,
+            "joint_vel": 12,
+            "actions": 12
         }
-        obs_actor = torch.cat(
-            [obs[:, obs_dict['lin_vel'][0]:obs_dict['lin_vel'][1]],
-            obs[:, obs_dict['ang_vel'][0]:obs_dict['ang_vel'][1]],
-            obs[:, obs_dict['proj_g'][0]:obs_dict['proj_g'][1]],
-            obs[:, obs_dict['vel_com'][0]:obs_dict['vel_com'][1]],
-            obs[:, obs_dict['joint_pos'][0]:obs_dict['joint_pos'][1]],
-            obs[:, obs_dict['joint_vel'][0]:obs_dict['joint_vel'][1]],
-            obs[:, obs_dict['actions'][0]:obs_dict['actions'][1]]],
-            dim=-1
-        )
-        obs = obs.view(1, 48, 50)
-        obs = obs.transpose(2,1)
-        z_hat = self.mlp(obs)
+
+        index = 0
+        obs_ordered = torch.empty((obs.shape[0], 0), dtype=torch.float32)
+        obs_actor = torch.empty((obs.shape[0], 0), dtype=torch.float32)
+        for v in obs_dict.values():
+            for i in range(v):
+                obs_slice = obs[:, index+i:index+v*history:v]
+                obs_ordered = torch.cat([obs_ordered, obs_slice], dim=-1)
+                a = obs[:, index+i].unsqueeze(dim=1)
+                obs_actor = torch.cat([obs_actor, a], dim=-1)
+            index += v*history
+
+        obs_ordered = obs_ordered.view(1, 48, 50)
+        obs_ordered = obs_ordered.transpose(2,1)
+        z_hat = self.mlp(obs_ordered)
         z_hat = z_hat.transpose(2,1)
         z_hat = self.conv_net(z_hat)
         actor_obs = torch.cat((z_hat,obs_actor), dim=-1)
